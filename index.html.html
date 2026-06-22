@@ -78,8 +78,13 @@
                         <input type="text" id="searchInput" class="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Search for item or barcode...">
                     </div>
                     <button onclick="openScanner('search')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center justify-center" title="Scan Barcode">
-                        <i class="fa-solid fa-camera mr-2"></i>
-                        <span class="text-sm font-semibold">Scan</span>
+                        <i class="fa-solid fa-camera sm:mr-2"></i>
+                        <span class="text-sm font-semibold hidden sm:inline">Scan</span>
+                    </button>
+                    <!-- NFC Button (Nakatago by default, lilitaw kung suportado ng device) -->
+                    <button onclick="startNFCScan('search')" class="nfc-supported-btn hidden bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center" title="Scan NFC Tag">
+                        <i class="fa-brands fa-nfc-symbol sm:mr-2"></i>
+                        <span class="text-sm font-semibold hidden sm:inline">NFC</span>
                     </button>
                 </div>
 
@@ -285,8 +290,12 @@
                 <label class="block text-sm font-medium text-slate-700 mb-2">Enter Barcode or Scan Image</label>
                 <div class="flex gap-2">
                     <input type="text" id="assignInput" class="flex-grow px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 998889140">
-                    <button onclick="openScanner('assign')" class="bg-slate-800 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-slate-700 transition-colors flex items-center justify-center">
+                    <button onclick="openScanner('assign')" class="bg-slate-800 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-slate-700 transition-colors flex items-center justify-center" title="Gamitin ang Camera">
                         <i class="fa-solid fa-camera"></i>
+                    </button>
+                    <!-- NFC Button para sa Assign Modal -->
+                    <button onclick="startNFCScan('assign')" class="nfc-supported-btn hidden bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center" title="Gamitin ang NFC">
+                        <i class="fa-brands fa-nfc-symbol"></i>
                     </button>
                 </div>
             </div>
@@ -1169,6 +1178,77 @@
         }
 
         function onScanFailure(error) { /* Ignore continuous warnings */ }
+
+        // --- NFC SCANNER API ---
+        let nfcAbortController = null;
+
+        // I-check kung suportado ang NFC pagka-load ng pahina
+        document.addEventListener('DOMContentLoaded', () => {
+            if ('NDEFReader' in window) {
+                // Ipakita ang NFC buttons kung suportado
+                document.querySelectorAll('.nfc-supported-btn').forEach(btn => btn.classList.remove('hidden'));
+            }
+        });
+
+        async function startNFCScan(mode) {
+            if (!('NDEFReader' in window)) {
+                showToast("Hindi suportado ang NFC sa device o browser na ito.", true);
+                return;
+            }
+
+            try {
+                if (nfcAbortController) {
+                    nfcAbortController.abort(); // Kanselahin ang nakaraang scan
+                }
+                nfcAbortController = new AbortController();
+                const ndef = new NDEFReader();
+                
+                // Humingi ng permission at magsimula
+                await ndef.scan({ signal: nfcAbortController.signal });
+                
+                showToast("NFC Ready: Itapat ang tag sa likod ng device...", false);
+
+                ndef.onreading = event => {
+                    const message = event.message;
+                    for (const record of message.records) {
+                        if (record.recordType === "text") {
+                            const textDecoder = new TextDecoder(record.encoding);
+                            const decodedText = textDecoder.decode(record.data);
+                            handleNFCResult(decodedText, mode);
+                            nfcAbortController.abort(); // Itigil ang scan pagkatapos makabasa
+                            return; 
+                        }
+                    }
+                    showToast("Walang text na nabasa sa NFC tag.", true);
+                    nfcAbortController.abort();
+                };
+
+                ndef.onreadingerror = () => {
+                    showToast("Hindi mabasa ang NFC tag. Subukan muli.", true);
+                    nfcAbortController.abort();
+                };
+
+            } catch (error) {
+                console.error("NFC Error:", error);
+                showToast("Error sa NFC (Baka nakapatay ito): " + error.message, true);
+            }
+        }
+
+        function handleNFCResult(decodedText, mode) {
+            showToast("NFC Tag nabasa!", false);
+            if (mode === 'search') {
+                searchInput.value = decodedText;
+                filterData();
+                searchInput.classList.add('ring-2', 'ring-indigo-500', 'border-indigo-500');
+                setTimeout(() => searchInput.classList.remove('ring-2', 'ring-indigo-500', 'border-indigo-500'), 1500);
+            } 
+            else if (mode === 'assign') {
+                document.getElementById('assignInput').value = decodedText;
+                const input = document.getElementById('assignInput');
+                input.classList.add('ring-2', 'ring-indigo-500', 'border-indigo-500');
+                setTimeout(() => input.classList.remove('ring-2', 'ring-indigo-500', 'border-indigo-500'), 1000);
+            }
+        }
 
         // Initial render
         renderTable(products);
