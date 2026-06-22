@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aqua Price List & Barcode Finder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
+        /* Style fixes for the html5-qrcode file uploader */
+        #reader__dashboard_section_csr span { display: block; margin-bottom: 8px; color: #64748b; font-size: 14px;}
+        #reader a { color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;}
+        #reader input[type="file"] { max-width: 100%; margin-top: 10px;}
+        
+        /* Print Styles for Standard Avery 5160 Labels (30 per sheet) */
+        @media screen {
+            .print-only { display: none !important; }
+        }
+        @media print {
+            body * { visibility: hidden; }
+            .print-only, .print-only * { visibility: visible; }
+            .print-only { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+            
+            @page { margin: 0; }
+            
+            .label-sheet {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0 0.125in;
+                padding: 0.5in 0.1875in;
+                width: 8.5in;
+                height: 11in;
+                box-sizing: border-box;
+                background: white;
+            }
+            .label {
+                width: 2.625in;
+                height: 1in;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                overflow: hidden;
+            }
+            .label-title { font-size: 8pt; font-weight: bold; max-width: 95%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: sans-serif; }
+            .label-price { font-size: 8pt; color: #000; margin-bottom: 2px; font-family: sans-serif; }
+            .label svg { max-width: 100%; height: auto; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-barcode text-blue-600"></i>
+                    Price List & Scanner
+                </h1>
+                <p class="text-slate-500 mt-1 text-sm md:text-base">Search for products, change prices, and scan codes.</p>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-3">
+                <!-- Search Input with Camera button -->
+                <div class="relative flex gap-2">
+                    <div class="relative flex-grow">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-search text-slate-400"></i>
+                        </div>
+                        <input type="text" id="searchInput" class="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Search for item or barcode...">
+                    </div>
+                    <button onclick="openScanner('search')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center justify-center" title="Scan Barcode">
+                        <i class="fa-solid fa-camera mr-2"></i>
+                        <span class="text-sm font-semibold">Scan</span>
+                    </button>
+                </div>
+
+                <!-- Category Dropdown -->
+                <div class="relative">
+                    <select id="categoryFilter" class="pl-3 pr-8 py-2 w-full sm:w-48 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none cursor-pointer text-sm">
+                        <option value="All">All Categories</option>
+                        <!-- Options populated by JS -->
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                        <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats & Actions Row -->
+        <div class="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-sm text-slate-500 font-medium">
+            <span id="resultCount">Showing all items</span>
+            
+            <div class="flex items-center gap-2">
+                <span class="text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg font-semibold mr-2">
+                    <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Auto-Saved
+                </span>
+                <button onclick="exportData()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-semibold transition-colors" title="Download Backup">
+                    <i class="fa-solid fa-download mr-1"></i> Backup
+                </button>
+                <label class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-semibold transition-colors cursor-pointer" title="Restore Backup">
+                    <i class="fa-solid fa-upload mr-1"></i> Restore
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+                </label>
+            </div>
+        </div>
+
+        <!-- Desktop Tabular View (hidden on mobile) -->
+        <div class="hidden md:block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                            <th class="p-4 font-semibold w-1/4">Category</th>
+                            <th class="p-4 font-semibold w-2/4">Item Name</th>
+                            <th class="p-4 font-semibold w-1/6 text-right">Price</th>
+                            <th class="p-4 font-semibold w-1/6 text-center">Barcode</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyDesktop" class="divide-y divide-slate-100">
+                        <!-- Rows populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Mobile Card View (hidden on Desktop) -->
+        <div id="mobileCardsContainer" class="block md:hidden space-y-3">
+            <!-- Cards populated by JS -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden flex flex-col items-center justify-center p-12 text-slate-400">
+            <i class="fa-solid fa-box-open text-4xl mb-3 text-slate-300"></i>
+            <p class="text-lg font-medium">No items found</p>
+            <p class="text-sm">Try changing your search or filter.</p>
+        </div>
+    </div>
+
+    <!-- Edit Price Modal -->
+    <div id="editPriceModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="absolute w-full h-full bg-slate-900 opacity-50 modal-overlay cursor-pointer" onclick="closeEditPriceModal()"></div>
+        
+        <div class="bg-white w-11/12 md:max-w-md mx-auto rounded-xl shadow-2xl z-50 overflow-y-auto">
+            <div class="flex justify-between items-center pb-3 p-5 border-b border-slate-100">
+                <p class="text-lg font-bold text-slate-800">Edit Price</p>
+                <div class="modal-close cursor-pointer z-50 p-2 text-slate-400 hover:text-slate-600 transition-colors" onclick="closeEditPriceModal()">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </div>
+            </div>
+            
+            <div class="p-5">
+                <p class="text-sm text-slate-500 mb-1">Item:</p>
+                <p id="editPriceItemName" class="font-bold text-slate-800 text-lg mb-4 leading-tight"></p>
+                
+                <label class="block text-sm font-medium text-slate-700 mb-2">New Price</label>
+                <div class="relative">
+                    <input type="text" id="editPriceInput" class="w-full px-3 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-blue-600 text-lg" placeholder="$0.00">
+                </div>
+            </div>
+            
+            <div class="flex justify-end items-center gap-2 pt-2 p-5 border-t border-slate-100">
+                <button id="resetPriceBtn" onclick="resetPrice()" class="mr-auto px-3 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors font-medium text-xs hidden">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> Revert
+                </button>
+                <button onclick="closeEditPriceModal()" class="px-4 py-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors font-medium text-sm">Cancel</button>
+                <button onclick="saveEditedPrice()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Item Details Expanded Modal (NEW BIG WINDOW) -->
+    <div id="detailsModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[70]">
+        <div class="absolute w-full h-full bg-slate-900 opacity-70 modal-overlay cursor-pointer" onclick="closeDetailsModal()"></div>
+        
+        <div class="bg-white w-11/12 md:max-w-3xl mx-auto rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col h-[85vh]">
+            <div class="flex justify-between items-center pb-3 p-5 border-b border-slate-100 flex-shrink-0 bg-slate-50">
+                <div>
+                    <p class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-blue-600"></i> Specs & Sales Pitch
+                    </p>
+                    <p id="largeDetailsItemName" class="text-sm text-slate-600 font-semibold mt-1"></p>
+                </div>
+                <div class="modal-close cursor-pointer z-50 p-2 text-slate-400 hover:text-slate-600 transition-colors bg-white rounded-full shadow-sm" onclick="closeDetailsModal()">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </div>
+            </div>
+            
+            <div class="p-5 flex-grow flex flex-col bg-slate-100">
+                <textarea id="largeItemDetails" class="w-full h-full text-sm md:text-base p-5 border border-slate-300 rounded-xl bg-white focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all resize-none font-medium text-slate-700 leading-relaxed shadow-inner" placeholder="Type or paste comprehensive specifications, features, and your sales pitch here..."></textarea>
+            </div>
+            
+            <div class="flex justify-end gap-3 pt-3 p-5 border-t border-slate-200 bg-white flex-shrink-0">
+                <button onclick="closeDetailsModal()" class="px-5 bg-slate-100 py-2.5 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors font-bold text-sm">Cancel</button>
+                <button onclick="saveItemDetails()" class="px-6 bg-blue-600 py-2.5 rounded-lg text-white hover:bg-blue-700 transition-colors font-bold text-sm flex items-center gap-2 shadow-md">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Info
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barcode View Modal -->
+    <div id="barcodeModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="absolute w-full h-full bg-slate-900 opacity-50 modal-overlay cursor-pointer" onclick="closeBarcodeModal()"></div>
+        
+        <div class="bg-white w-11/12 md:max-w-md mx-auto rounded-xl shadow-2xl z-50 overflow-y-auto">
+            <div class="flex justify-between items-center pb-3 p-5 border-b border-slate-100">
+                <p class="text-lg font-bold text-slate-800">Barcode Generator</p>
+                <div class="modal-close cursor-pointer z-50 p-2 text-slate-400 hover:text-slate-600 transition-colors" onclick="closeBarcodeModal()">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </div>
+            </div>
+            
+            <div class="p-6 text-center flex flex-col items-center justify-center">
+                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm mb-4 w-full flex justify-center min-h-[140px]">
+                    <svg id="barcodeCanvas"></svg>
+                </div>
+                <p id="modalPrice" class="text-3xl font-extrabold text-blue-600 mb-1"></p>
+                <p id="modalItemName" class="text-base font-medium text-slate-800 mb-2"></p>
+                <div id="barcodeTypeBadge" class="text-xs px-2.5 py-1 rounded-full font-semibold inline-block mt-2"></div>
+                
+                <div class="mt-5 w-full bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-left shadow-sm">
+                    <p class="text-xs font-bold text-yellow-800 mb-1"><i class="fa-solid fa-lightbulb mr-1 text-yellow-500"></i> Scanning on Phones / Glass:</p>
+                    <ul class="text-[11px] text-yellow-700 list-disc pl-4 space-y-0.5 font-medium">
+                        <li>Turn screen brightness to <b>maximum</b>.</li>
+                        <li><b>Tilt the phone slightly (15-30°)</b> so the red laser glare bounces away from the scanner, not directly back into it.</li>
+                    </ul>
+                </div>
+
+                <!-- Product Specs & Pitch Area (Clickable Preview) -->
+                <div class="mt-5 w-full text-left">
+                    <label class="flex justify-between items-end text-xs font-bold text-slate-700 mb-1.5 px-1">
+                        <span><i class="fa-solid fa-list-check mr-1 text-blue-500"></i> Specs & Sales Pitch</span>
+                    </label>
+                    <div onclick="openDetailsModal()" class="w-full text-xs p-3.5 border border-slate-300 rounded-xl bg-white hover:bg-blue-50 hover:border-blue-400 hover:shadow-md cursor-pointer transition-all relative group min-h-[90px]">
+                        <div id="modalItemDetailsPreview" class="whitespace-pre-wrap line-clamp-3 overflow-hidden font-medium leading-relaxed"></div>
+                        <div class="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl backdrop-blur-[1px]">
+                            <span class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-lg flex items-center gap-2">
+                                <i class="fa-solid fa-expand"></i> Click to Expand & Edit Details
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center pt-4 p-5 border-t border-slate-100 bg-slate-50">
+                <div class="flex gap-2">
+                    <button id="resetBarcodeBtn" onclick="resetBarcode()" class="px-3 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg hover:bg-rose-50 transition-colors font-semibold text-xs hidden shadow-sm">
+                        <i class="fa-solid fa-trash mr-1"></i> Delete Code
+                    </button>
+                    <button onclick="printBarcodeLabel()" class="px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-semibold text-xs shadow-sm">
+                        <i class="fa-solid fa-print mr-1"></i> Print Labels
+                    </button>
+                </div>
+                <button onclick="closeBarcodeModal()" class="px-5 bg-blue-600 py-2 rounded-lg text-white hover:bg-blue-700 transition-colors font-semibold text-sm shadow-sm">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Barcode Modal -->
+    <div id="assignModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="absolute w-full h-full bg-slate-900 opacity-50 modal-overlay cursor-pointer" onclick="closeAssignModal()"></div>
+        
+        <div class="bg-white w-11/12 md:max-w-md mx-auto rounded-xl shadow-2xl z-50 overflow-y-auto">
+            <div class="flex justify-between items-center pb-3 p-5 border-b border-slate-100">
+                <p class="text-lg font-bold text-slate-800">Assign Barcode</p>
+                <div class="modal-close cursor-pointer z-50 p-2 text-slate-400 hover:text-slate-600 transition-colors" onclick="closeAssignModal()">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </div>
+            </div>
+            
+            <div class="p-5">
+                <p class="text-sm text-slate-500 mb-1">Item:</p>
+                <p id="assignItemName" class="font-bold text-slate-800 text-lg mb-4"></p>
+                
+                <label class="block text-sm font-medium text-slate-700 mb-2">Enter Barcode or Scan Image</label>
+                <div class="flex gap-2">
+                    <input type="text" id="assignInput" class="flex-grow px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 998889140">
+                    <button onclick="openScanner('assign')" class="bg-slate-800 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-slate-700 transition-colors flex items-center justify-center">
+                        <i class="fa-solid fa-camera"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 pt-2 p-5 border-t border-slate-100">
+                <button onclick="closeAssignModal()" class="px-4 py-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors font-medium text-sm">Cancel</button>
+                <button onclick="saveAssignedBarcode()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm">Save Code</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Scanner Modal -->
+    <div id="scannerModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[60]">
+        <div class="absolute w-full h-full bg-slate-900 opacity-80 modal-overlay cursor-pointer" onclick="closeScanner()"></div>
+        
+        <div class="bg-white w-11/12 md:max-w-lg mx-auto rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center pb-3 p-5 border-b border-slate-100 flex-shrink-0">
+                <p class="text-lg font-bold text-slate-800" id="scannerTitle">Scan Barcode</p>
+                <div class="modal-close cursor-pointer z-50 p-2 text-slate-400 hover:text-slate-600 transition-colors" onclick="closeScanner()">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </div>
+            </div>
+            
+            <div class="p-4 overflow-y-auto flex-grow">
+                <div id="reader" class="w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50 min-h-[250px] p-2"></div>
+                <p class="text-sm text-center text-slate-500 mt-4" id="scannerInstruction">Point your camera or select an image to scan.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification System -->
+    <div id="toastNotification" class="opacity-0 pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-2xl transition-opacity duration-300 z-[100] font-medium text-sm flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-400" id="toastIcon"></i>
+        <span id="toastMessage">Notification message</span>
+    </div>
+
+    <script>
+        // Custom Toast Function (Replaces alerts)
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            toastMsg.textContent = message;
+            
+            if (isError) {
+                toast.classList.replace('bg-slate-800', 'bg-rose-600');
+                toastIcon.className = "fa-solid fa-circle-exclamation text-white";
+            } else {
+                toast.classList.replace('bg-rose-600', 'bg-slate-800');
+                toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        // Master Database
+        const products = [
+            // Image 1: Amenities & Pre-Paids
+            { category: "Amenities & Pre-Paids", name: "NCL PHO15F (Daily Rate $4) ValuePac", price: "$4.00", barcode: "999999448" },
+            { category: "Amenities & Pre-Paids", name: "NCL AM10PK", price: "$30.00", barcode: "998888972" },
+            { category: "Amenities & Pre-Paids", name: "NCL Romance Pkg. 2024", price: "$8.00", barcode: "998889223" },
+            { category: "Amenities & Pre-Paids", name: "PHO2 - 2 KEEPSAKE PHOTOS", price: "$8.00", barcode: "998889069" },
+            { category: "Amenities & Pre-Paids", name: "NCL DOND", price: "$8.00", barcode: "901025652" },
+            { category: "Amenities & Pre-Paids", name: "NCL PHOWA1", price: "$49.99", barcode: "998889140" },
+            { category: "Amenities & Pre-Paids", name: "NCL PHOWA2", price: "$199.00", barcode: "901100013" },
+            { category: "Amenities & Pre-Paids", name: "NCL PHOWA4", price: "$449.00", barcode: "999999585" },
+            { category: "Amenities & Pre-Paids", name: "NCL DINPHO", price: "$19.99", barcode: "998889009" },
+            { category: "Amenities & Pre-Paids", name: "Celebration Pkg - Frame & Photo", price: "$15.00", barcode: "999999795" },
+            { category: "Amenities & Pre-Paids", name: "WOF Basic Frame Set 3", price: "$39.60", barcode: "998889457" },
+            { category: "Amenities & Pre-Paids", name: "WOF Basic Photography Package", price: "$59.60", barcode: "998889456" },
+            { category: "Amenities & Pre-Paids", name: "Behind the Scenes Tour per person", price: "$4.00", barcode: "998889336" },
+            { category: "Amenities & Pre-Paids", name: "NCL PHOPS1 Perspectives 50% Off", price: "$300.00", barcode: "901026825" },
+            { category: "Amenities & Pre-Paids", name: "Engraved Frame Romance Pckg", price: "$29.95", barcode: "998889071" },
+            { category: "Amenities & Pre-Paids", name: "Intimate Wedding Collection", price: "$799.00", barcode: "901025723" },
+            { category: "Amenities & Pre-Paids", name: "Elegant Wedding Collection", price: "$1,249.00", barcode: "901025724" },
+            { category: "Amenities & Pre-Paids", name: "Signature Wedding Collection", price: "$1,899.00", barcode: "901025725" },
+            
+            // Image 2: Frames / Frame Promos
+            { category: "Frames", name: "Porthole - Rustic Green", price: "$29.95", barcode: "901026058" },
+            { category: "Frame Promos", name: "Porthole - Rustic Green", price: "$20.00", barcode: "998888923" },
+            { category: "Frames", name: "Porthole - White", price: "$29.95", barcode: "998889084" },
+            { category: "Frame Promos", name: "Porthole - White", price: "$20.00", barcode: "998889109" },
+            { category: "Frames", name: "Porthole - Silver", price: "$29.95", barcode: "998889083" },
+            { category: "Frame Promos", name: "Porthole - Silver", price: "$20.00", barcode: "998889110" },
+            { category: "Frames", name: "Engraved - H Wood", price: "$29.95", barcode: "999999651" },
+            { category: "Frame Promos", name: "Engraved - H Wood", price: "$20.00", barcode: "998888935" },
+            { category: "Frames", name: "Engraved - H Shell", price: "$29.95", barcode: "999999649" },
+            { category: "Frame Promos", name: "Engraved - H Shell", price: "$20.00", barcode: "998888931" },
+            { category: "Frames", name: "Engraved - H Metal", price: "$29.95", barcode: "999999653" },
+            { category: "Frame Promos", name: "Engraved - H Metal", price: "$20.00", barcode: "998888933" },
+            { category: "Frames", name: "Engraved - V Black", price: "$29.95", barcode: "999999650" },
+            { category: "Frame Promos", name: "Engraved - V Black", price: "$20.00", barcode: "998888936" },
+            { category: "Frames", name: "Engraved - V Shell", price: "$29.95", barcode: "999999648" },
+            { category: "Frame Promos", name: "Engraved - V Shell", price: "$20.00", barcode: "998888930" },
+            { category: "Frames", name: "Engraved - V Metal", price: "$29.95", barcode: "999999652" },
+            { category: "Frame Promos", name: "Engraved - V Metal", price: "$20.00", barcode: "998888932" },
+            
+            // Image 3: Frames / Frame Promos
+            { category: "Frames", name: "Light Up Frame", price: "$29.94", barcode: "901026054" },
+            { category: "Frame Promos", name: "Light Up Frame", price: "$20.00", barcode: "999999761" },
+            { category: "Frames", name: "Photo Spot - Light Wood", price: "$29.95", barcode: "998889469" },
+            { category: "Frame Promos", name: "Photo Spot - Light Wood", price: "$20.00", barcode: "998889472" },
+            { category: "Frames", name: "Seascape", price: "$29.95", barcode: "999999609" },
+            { category: "Frame Promos", name: "Seascape", price: "$20.00", barcode: "999999610" },
+            { category: "Frames", name: "Compass Collection - Frame", price: "$29.95", barcode: "999999411" },
+            { category: "Frame Promos", name: "Compass Collection - Frame", price: "$20.00", barcode: "999999414" },
+            { category: "Frames", name: "Compass Collection - Folio", price: "$29.95", barcode: "999999410" },
+            { category: "Frame Promos", name: "Compass Collection - Folio", price: "$20.00", barcode: "999999413" },
+            { category: "Frames", name: "Compass Collection - Album", price: "$29.95", barcode: "999999412" },
+            { category: "Frame Promos", name: "Compass Collection - Album", price: "$20.00", barcode: "999999415" },
+            { category: "Frames", name: "Compass Collection - Bundle", price: "$59.95", barcode: "999999416" },
+            { category: "Frame Promos", name: "Plush Animal - Bundle", price: "$44.95", barcode: "901026062" },
+            { category: "Frames", name: "Plush Animal - Monkey", price: "$29.95", barcode: "901026063" },
+            { category: "Frame Promos", name: "Plush Animal - Monkey", price: "$20.00", barcode: "998888927" },
+            { category: "Frames", name: "Plush Animal - Elephant", price: "$29.95", barcode: "901026060" },
+            { category: "Frame Promos", name: "Plush Animal - Elephant", price: "$20.00", barcode: "998888924" },
+
+            // Image 4: Free At Sea Packages / Photo Packages / Other Photo Packages
+            { category: "Free At Sea Packages", name: "Basic - 5 Images + 1 Extra", price: "$149.00", barcode: "999999560" },
+            { category: "Photo Packages", name: "Basic - 5 Images", price: "$149.00", barcode: "998889087" },
+            { category: "Free At Sea Packages", name: "Deluxe - 8 Images + 2 Extra", price: "$199.00", barcode: "999999561" },
+            { category: "Photo Packages", name: "Deluxe - 8 Images", price: "$199.00", barcode: "901100024" },
+            { category: "Free At Sea Packages", name: "Premium - 12 Images + 3 Extra", price: "$249.00", barcode: "999999562" },
+            { category: "Photo Packages", name: "Premium - 12 Images", price: "$249.00", barcode: "901100025" },
+            { category: "Free At Sea Packages", name: "Ultimate - 24 Images + 5 Extra", price: "$349.00", barcode: "999999563" },
+            { category: "Photo Packages", name: "Ultimate - 24 Images", price: "$349.00", barcode: "901100035" },
+            { category: "Free At Sea Packages", name: "Digi Max - 48 Images + 5 Extra", price: "$449.00", barcode: "999999564" },
+            { category: "Photo Packages", name: "Digi Max - 48 Images", price: "$449.00", barcode: "999999472" },
+            { category: "Other Photo Packages", name: "Single Print & Digital", price: "$49.95", barcode: null },
+            { category: "Other Photo Packages", name: "Digital Photo Spot", price: "$75.00", barcode: "998889283" },
+            { category: "Other Photo Packages", name: "PHO GROUP 49<", price: "$200.00", barcode: "999999703" },
+            { category: "Other Photo Packages", name: "PHO GROUP 50 > 149", price: "$350.00", barcode: "999999704" },
+            { category: "Other Photo Packages", name: "PHO GROUP 150+", price: "$500.00", barcode: "999999705" },
+            { category: "Other Photo Packages", name: "PHO GROUP 8x10 Print (each)", price: "$9.95", barcode: "999999706" },
+
+            // Image 5: Digital Max Add-Ons / Amenity Upgrades
+            { category: "Digital Max Add-Ons", name: "Digital Max (Add-on) - 1 Image", price: "$5.00", barcode: "999999550" },
+            { category: "Digital Max Add-Ons", name: "Digital Max - Up to 5 Images", price: "$25.00", barcode: "999999551" },
+            { category: "Digital Max Add-Ons", name: "Digital Max - Up to 10 Images", price: "$50.00", barcode: "999999552" },
+            { category: "Digital Max Add-Ons", name: "Digital Max - Up to 20 Images", price: "$100.00", barcode: "999999553" },
+            { category: "Digital Max Add-Ons", name: "Digital Max - Up to 30 Images", price: "$150.00", barcode: "999999554" },
+            { category: "Digital Max Add-Ons", name: "Digital Max - Up to 40 Images", price: "$200.00", barcode: "999999555" },
+            { category: "Digital Max Add-Ons", name: "Digital Max - Up to 50 Images", price: "$250.00", barcode: "999999556" },
+            { category: "Amenity Upgrades", name: "PHO10 upgrade to Premium", price: "$49.00", barcode: "999999542" },
+            { category: "Amenity Upgrades", name: "PHO15F upgrade to Ultimate", price: "$149.00", barcode: "999999715" },
+            { category: "Amenity Upgrades", name: "PHO10 upgrade to Ultimate", price: "$149.00", barcode: "999999543" },
+            { category: "Amenity Upgrades", name: "PHO15F upgrade to Max", price: "$249.00", barcode: "999999714" },
+            { category: "Amenity Upgrades", name: "PHO10 upgrade to Max", price: "$249.00", barcode: "999999544" },
+
+            // Image 6: RAFFLE UPGRADE / Photo Books
+            { category: "RAFFLE UPGRADE", name: "Raffle Upgrade - Deluxe 8", price: "$149.00", barcode: "999999819" },
+            { category: "RAFFLE UPGRADE", name: "Raffle Upgrade - Ultimate 24", price: "$249.00", barcode: "999999821" },
+            { category: "RAFFLE UPGRADE", name: "Raffle Upgrade - Premium 12", price: "$199.00", barcode: "999999820" },
+            { category: "RAFFLE UPGRADE", name: "Raffle Upgrade - Digimax 24", price: "$349.00", barcode: "999999822" },
+            { category: "Photo Books", name: "Standard NCL Photo Book", price: "$79.00", barcode: "999999637" },
+            { category: "Photo Books", name: "Standard NCL Photo Book Upgrade", price: "$69.00", barcode: "999999638" },
+            { category: "Photo Books", name: "Premium NCL Photo Book", price: "$159.00", barcode: "999999639" },
+            { category: "Photo Books", name: "Premium NCL Photo Book Upgrade", price: "$139.00", barcode: "999999640" },
+
+            // Image 7: Crystals / Irisphoto - Triple
+            { category: "Crystals", name: "Medium Rectangle Crystal 8x5", price: "$79.00", barcode: "901026717" },
+            { category: "Crystals", name: "Large Rectangle Crystal 9x6", price: "$99.00", barcode: "901026715" },
+            { category: "Crystals", name: "Extra Large Rectangle Crystal 12x8", price: "$199.00", barcode: "901026714" },
+            { category: "Crystals", name: "Mini Mantle Rectangle Crystal 15x10", price: "$299.00", barcode: "901026734" },
+            { category: "Crystals", name: "Mantle Rectangle Crystal 18x12", price: "$399.00", barcode: "901026713" },
+            { category: "Crystals", name: "Mini Presidential Crystal 22x16", price: "$749.00", barcode: "901026712" },
+            { category: "Crystals", name: "Presidential Rectangle Crystal 27x18", price: "$1,199.00", barcode: "901026711" },
+            { category: "Crystals", name: "Large Heart Crystal 12x11", price: "$299.00", barcode: "901026736" },
+            { category: "Crystals", name: "Large Prestige Crystal 20x16", price: "$399.00", barcode: "901026735" },
+            { category: "Crystals", name: "Additional Crystal Keychain", price: "$15.00", barcode: "901026720" },
+            { category: "Crystals", name: "Shipping (USA & Canada Only)", price: "$20.00", barcode: "901026724" },
+            { category: "Crystals", name: "Shipping (International - Multiply)", price: "$20.00", barcode: "901026725" },
+            { category: "Irisphoto - Triple", name: "Triple Medium- Print", price: "$199.00", barcode: "999999811" },
+            { category: "Irisphoto - Triple", name: "Triple Large Print w/Digital", price: "$299.00", barcode: "999999813" },
+            { category: "Irisphoto - Triple", name: "Triple Medium Print w/ Digital", price: "$249.00", barcode: "999999812" },
+            { category: "Irisphoto - Triple", name: "Triple Digital File", price: "$199.00", barcode: "999999814" },
+
+            // Image 8: Irisphoto - Single / Irisphoto - Double & Family
+            { category: "Irisphoto - Single", name: "Single Print - Small", price: "$49.00", barcode: "999999481" },
+            { category: "Irisphoto - Single", name: "Single Print - Medium", price: "$59.00", barcode: "999999482" },
+            { category: "Irisphoto - Single", name: "Single Print - Large", price: "$89.00", barcode: "999999483" },
+            { category: "Irisphoto - Single", name: "Single Digital File w/print", price: "$59.00", barcode: "999999488" },
+            { category: "Irisphoto - Single", name: "Single Digital File", price: "$99.00", barcode: "999999490" },
+            { category: "Irisphoto - Single", name: "Single Wall Art - Metal 8x8", price: "$329.00", barcode: "999999505" },
+            { category: "Irisphoto - Single", name: "Single Wall Art - Metal 12x12", price: "$399.00", barcode: "999999506" },
+            { category: "Irisphoto - Single", name: "Single Wall Art - Metal 24x24", price: "$599.00", barcode: "999999507" },
+            { category: "Irisphoto - Single", name: "Shipping (US)", price: "$20.00", barcode: "999999545" },
+            { category: "Irisphoto - Double & Family", name: "Double Print - Medium", price: "$149.00", barcode: "999999491" },
+            { category: "Irisphoto - Double & Family", name: "Double Print - Medium w/ Digital File", price: "$189.00", barcode: "999999492" },
+            { category: "Irisphoto - Double & Family", name: "Double Print - Large", price: "$179.00", barcode: "999999495" },
+            { category: "Irisphoto - Double & Family", name: "Double Print - Large w/ Digital File", price: "$219.00", barcode: "999999493" },
+            { category: "Irisphoto - Double & Family", name: "Double Digital File", price: "$149.00", barcode: "999999494" },
+            { category: "Irisphoto - Double & Family", name: "Double Wall Art - Metal 16x20", price: "$549.00", barcode: "999999511" },
+            { category: "Irisphoto - Double & Family", name: "Double Wall Art - Metal 20x30", price: "$599.00", barcode: "999999512" },
+            { category: "Irisphoto - Double & Family", name: "Family Canvas - 3 Irises", price: "$749.00", barcode: "999999502" },
+            { category: "Irisphoto - Double & Family", name: "Family Canvas - 4 or 5 Irises", price: "$949.00", barcode: "999999503" },
+
+            // Image 9: CANVAS AND METALS
+            { category: "CANVAS AND METALS", name: "3 Image Set Canvas Regular", price: "$225.00", barcode: "901027308" },
+            { category: "CANVAS AND METALS", name: "3 Image Set Metal Regular", price: "$350.00", barcode: "901027320" },
+            { category: "CANVAS AND METALS", name: "4 Image Set Canvas Regular", price: "$275.00", barcode: "901027322" },
+            { category: "CANVAS AND METALS", name: "4 Image Set Metal Regular", price: "$375.00", barcode: "901027314" },
+            { category: "CANVAS AND METALS", name: "5 Image Set Canvas Regular", price: "$375.00", barcode: "901027316" },
+            { category: "CANVAS AND METALS", name: "5 Image Set Metal Regular", price: "$599.00", barcode: "901027318" },
+            { category: "CANVAS AND METALS", name: "11x14 Canvas", price: "$99.00", barcode: "901025759" },
+            { category: "CANVAS AND METALS", name: "11x14 Metal", price: "$125.00", barcode: "901027305" },
+            { category: "CANVAS AND METALS", name: "16x20 Canvas", price: "$125.00", barcode: "901025760" },
+            { category: "CANVAS AND METALS", name: "16x20 Metal", price: "$219.95", barcode: "901027306" },
+            { category: "CANVAS AND METALS", name: "20x24 Canvas", price: "$150.00", barcode: "901025761" },
+            { category: "CANVAS AND METALS", name: "20x24 Metal", price: "$269.95", barcode: "901027307" },
+
+            // Image 10: Holiday Ornaments / Lanyards & Accessories
+            { category: "Holiday Ornaments", name: "Metal Anchor", price: "$14.95", barcode: "998889466" },
+            { category: "Holiday Ornaments", name: "Cruising Santa", price: "$14.95", barcode: "998889465" },
+            { category: "Holiday Ornaments", name: "Anchor", price: "$14.95", barcode: "901025836" },
+            { category: "Holiday Ornaments", name: "Metal Porthole Frame", price: "$14.95", barcode: "998889464" },
+            { category: "Holiday Ornaments", name: "Captain Santa", price: "$14.95", barcode: "901025835" },
+            { category: "Holiday Ornaments", name: "Ship", price: "$14.95", barcode: "901025833" },
+            { category: "Holiday Ornaments", name: "Metal Ship Prima Class", price: "$14.95", barcode: "998889467" },
+            { category: "Holiday Ornaments", name: "Ornaments - Buy 3 Get 1 Free", price: "$44.85", barcode: "998888973" },
+            { category: "Lanyards & Accessories", name: "Lanyard - NCL Aqua", price: "$9.95", barcode: "999999608" },
+            { category: "Lanyards & Accessories", name: "Aqua w/Cruise Icons", price: "$9.95", barcode: "998889292" },
+            { category: "Lanyards & Accessories", name: "Pink w/white waves", price: "$9.95", barcode: "998889294" },
+            { category: "Lanyards & Accessories", name: "Navy w/white waves", price: "$9.95", barcode: "998889293" },
+            { category: "Lanyards & Accessories", name: "Waterproof Phone/Camera Case", price: "$9.95", barcode: "998888993" },
+            { category: "Lanyards & Accessories", name: "Lanyard - Any 2 Promo", price: "$17.95", barcode: "998889011" },
+            { category: "Lanyards & Accessories", name: "Elephant Key Ring Cloth", price: "$9.95", barcode: "998888963" },
+            { category: "Lanyards & Accessories", name: "Ship Key Ring Cloth", price: "$9.95", barcode: "999999782" },
+
+            // Image 11: Aqua Case
+            { category: "Aqua Case", name: "NCL Aqua Case Regular Size Black", price: "$14.95", barcode: "998889295" },
+            { category: "Aqua Case", name: "NCL Aqua Case Regular Size White", price: "$14.95", barcode: "998889296" },
+            { category: "Aqua Case", name: "NCL Aqua Case Regular Size Light Blue", price: "$14.95", barcode: "998889297" },
+            { category: "Aqua Case", name: "NCL Aqua Case Regular Size Dark Blue", price: "$14.95", barcode: "998889298" },
+            { category: "Aqua Case", name: "NCL Aqua Case Plus Size Black", price: "$19.95", barcode: "998889299" },
+            { category: "Aqua Case", name: "NCL Aqua Case Plus Size White", price: "$19.95", barcode: "998889300" },
+            { category: "Aqua Case", name: "NCL Aqua Case Plus Size Light Blue", price: "$19.95", barcode: "998889301" },
+            { category: "Aqua Case", name: "NCL Aqua Case Plus Size Dark Blue", price: "$19.95", barcode: "998889302" },
+
+            // Image 12: Sony Camera & Accessories / Fujifilm Camera & Accessories
+            { category: "Sony Camera & Accessories", name: "SONY a7 IV Mirrorless Camera", price: "$2,699.99", barcode: "998889305", details: "SPECS:\n• 33MP Full-Frame Exmor R BSI CMOS Sensor\n• Up to 10 fps Shooting, ISO 100-51200\n• 4K 60p Video in 10-Bit, S-Cinetone\n• Real-time Eye AF for Humans/Animals/Birds\n• 5.5-Stop 5-Axis Image Stabilization\n• 3-inch Fully Articulating Touchscreen\n\nFEATURES:\nThe a7 IV does it all. It boasts a massive 33-megapixel full-frame sensor giving incredible detail and cropping flexibility. The autofocus is arguably the best in the world, locking onto subjects instantly. It shoots professional-level cinematic 4K video with zero recording limits.\n\nPITCH / HOW TO SELL:\n\"This is the ultimate hybrid camera for pro-level photos and cinematic videos. Whether you are capturing bald eagles in Alaska or sunset portraits in the Caribbean, it simply will not miss a shot.\"\n\nSALES ACTION:\nHand the camera to the guest. Turn on Real-time AF tracking. Have them aim at a family member walking around. Once they see the green box stick like glue to the subject's eye automatically, the camera sells itself." },
+            { category: "Sony Camera & Accessories", name: "SONY ZV-E10 Digital Camera", price: "$899.99", barcode: "998889307", details: "SPECS:\n• 24.2MP APS-C Exmor CMOS Sensor\n• UHD 4K30p and Full HD 120p Video\n• 3.0\" Side Flip-Out Touchscreen\n• 425-Point Fast Hybrid AF\n• Directional 3-Capsule Mic & Windscreen included\n\nFEATURES:\nBuilt specifically for content creators and travel vloggers. It completely removes the complexity of photography. It features a dedicated 'Background Defocus' button to instantly get that professional blurry background (bokeh), and a 'Product Showcase' setting that instantly pulls focus to objects held up to the lens.\n\nPITCH / HOW TO SELL:\n\"The ultimate travel and vlogging camera. It’s incredibly lightweight so you won't get tired carrying it on all-day excursions, but it packs the massive sensor of a professional camera.\"\n\nSALES ACTION:\nShow the guest the Background Defocus button on top. Have them take a photo of their partner with it off, and then press the button and take it again. Show them the cinematic blur. Explain they don't need any photography experience to get professional results." },
+            { category: "Sony Camera & Accessories", name: "Rechargeable Battery for a7", price: "$79.99", barcode: "998889310" },
+            { category: "Sony Camera & Accessories", name: "Rechargeable Battery for ZV-E10", price: "$79.95", barcode: "998889313" },
+            { category: "Sony Camera & Accessories", name: "Battery Charger for a7", price: "$99.99", barcode: "998889312" },
+            { category: "Sony Camera & Accessories", name: "Battery Charger for ZV-E10", price: "$48.99", barcode: "998889314" },
+            { category: "Sony Camera & Accessories", name: "Camera Bag for a7", price: "$46.99", barcode: "998889311" },
+            { category: "Sony Camera & Accessories", name: "Camera Bag for ZV-E10", price: "$29.99", barcode: "998889342" },
+            { category: "Sony Camera & Accessories", name: "POWER UHS-II (V90) SD 64gb", price: "$89.99", barcode: "998889335", details: "PITCH: A V90 card is essential if they are shooting 4K video on the Sony a7. Slower cards will drop frames or stop recording entirely." },
+            { category: "Sony Camera & Accessories", name: "Vlogger Accessory Kit", price: "$149.99", barcode: "998889308" },
+            { category: "Fujifilm Camera & Accessories", name: "Fujifilm X100IV Camera", price: "$1,799.95", barcode: "999999779", details: "SPECS:\n• 26.1MP APS-C X-Trans BSI CMOS Sensor\n• Fixed Fujinon 23mm f/2 Lens\n• Advanced Hybrid Optical/Electronic Viewfinder\n• 4K DCI/UHD Video capabilities\n• Built-in 4-Stop ND Filter\n• Legendary Built-in Film Simulations\n\nFEATURES:\nThe most viral, highly sought-after street photography camera in the world right now (expect waiting lists back home). It features tactile vintage dials for shutter speed and exposure. The Hybrid viewfinder lets you literally switch between a digital screen and true optical glass just like an old-school rangefinder.\n\nPITCH / HOW TO SELL:\n\"This camera is a masterpiece of design and function. It's the ultimate travel companion because the lens is built right in, keeping it pocketable and unobtrusive.\"\n\nSALES ACTION:\nHighlight the Film Simulations (Classic Chrome, Portra, etc.). Explain: \"It’s like having professional color grading and film stock built right into the sensor. You don't need to use a computer to edit these photos; they look cinematic and nostalgic straight out of the camera. Perfect for instantly transferring to your phone via Bluetooth and sharing your cruise memories immediately.\"" },
+            { category: "Fujifilm Camera & Accessories", name: "Fujifilm X100 Tele-Conversion Lens", price: "$399.95", barcode: "999999780" },
+            { category: "Fujifilm Camera & Accessories", name: "Fujifilm X100 Leather Case", price: "$79.99", barcode: "999999781" },
+
+            // Image 13: GoPro Camera & Accessories / Binoculars
+            { category: "GoPro Camera & Accessories", name: "GoPro HERO 13 Specialty Bundle", price: "$429.99", barcode: "999999577", details: "SPECS:\n• 5.3K60 / 4K120 Video Resolution\n• 27MP High-Res Photos\n• HyperSmooth 6.0 Video Stabilization with 360° Horizon Lock\n• Waterproof to 33ft (10m) without needing a case\n• Enduro Cold-Weather Battery included\n\nFEATURES:\nThe toughest, most versatile action camera on the market. The HyperSmooth stabilization makes running, zip-lining, or off-roading look like it was shot on a smooth floating drone. It can be fully voice-controlled so you can mount it to your helmet or chest and just say 'GoPro, start recording'.\n\nPITCH / HOW TO SELL:\n\"This is your completely indestructible excursion camera. Bring it snorkeling, surfing, or to the beach. You don't have to worry about water, sand, drops, or ruining your expensive smartphone.\"\n\nSALES ACTION:\nTurn the camera on and physically shake it rapidly side-to-side while showing the guest the screen. Have them watch how the image stays perfectly still and locked to the horizon thanks to the internal stabilization." },
+            { category: "GoPro Camera & Accessories", name: "GoPro Dual Charger + 2 Batteries", price: "$89.99", barcode: "999999582", details: "PITCH: Excursions last all day; GoPro batteries don't. This is a must-have add-on so they don't miss capturing the end of their tour." },
+            { category: "GoPro Camera & Accessories", name: "GoPro Adventure Kit 3.0", price: "$69.99", barcode: "999999778" },
+            { category: "GoPro Camera & Accessories", name: "GoPro The Handler", price: "$39.99", barcode: "998889388", details: "PITCH: A floating hand grip. Essential for snorkeling or beach days so the GoPro doesn't sink to the bottom of the ocean." },
+            { category: "GoPro Camera & Accessories", name: "GoPro 3-Way Grip 2.0", price: "$79.99", barcode: "998889338" },
+            { category: "GoPro Camera & Accessories", name: "GoPro Chesty", price: "$49.99", barcode: "999999403" },
+            { category: "Binoculars", name: "Leica 10x42 Trinovid HD", price: "$1,100.00", barcode: "901027838", details: "SPECS: 10x Magnification | 42mm Objective Lens | High-Contrast HD Optics | Waterproof | Rubber Armoring.\nPITCH: Premium German engineering. Hand this to a guest and tell them to look out at the ocean; the stunning edge-to-edge clarity and color fidelity sell themselves." },
+            { category: "Binoculars", name: "Leica 10x25 Trinovid BCA Compact", price: "$599.00", barcode: "901027837", details: "SPECS: 10x Magnification | 25mm Lens | Ultra-Compact Dual-Hinge Design | HDC Multi-Coating.\nPITCH: Leica quality that fits in a pocket. Perfect for guests who want premium clarity on excursions but don't want to carry heavy gear." },
+            { category: "Binoculars", name: "Fujinon Techno-Stabi 16x28", price: "$699.95", barcode: "999999421", details: "SPECS: 16x High Magnification | Optical Image Stabilization (±3 degrees) | Multi-Coated Optics.\nPITCH: The ultimate cruise binocular! Have the guest look through them, then flip the stabilization switch ON. It completely removes boat sway and hand tremors, making 16x magnification incredibly smooth." },
+            { category: "Binoculars", name: "Fujinon HYPER-CLARITY 10x42", price: "$849.99", barcode: "998889214", details: "SPECS: 10x Mag | Super EBC Multi-Coating | Water/Fog Proof | Robust Magnesium Alloy Body.\nPITCH: Incredible light transmission for bright, clear viewing even at dusk. Built tough enough to handle extreme marine environments." },
+            { category: "Binoculars", name: "Pentax PAPILIO III 8.5x21 WR Olive", price: "$169.95", barcode: "999999783", details: "SPECS: 8.5x Mag | Macro Focus (Focuses as close as 1.6ft / 0.5m) | Fully Multi-Coated.\nPITCH: The unique 'butterfly' binocular. Explain that unlike normal binoculars, these can focus on objects right at their feet (like insects or flowers on a trail), as well as distant landscapes." },
+            { category: "Binoculars", name: "Pentax SP 20x60 WP", price: "$249.00", barcode: "998889222", details: "SPECS: Massive 20x Magnification | 60mm Light-Gathering Lenses | Waterproof | Tripod Mountable.\nPITCH: For extreme long-distance viewing. The massive 60mm lenses keep the image bright even at 20x zoom. Recommend resting elbows on the ship railing to stabilize the view." },
+            { category: "Binoculars", name: "Pentax SD 10x42 WP", price: "$279.00", barcode: "998889357", details: "SPECS: 10x Mag | 42mm Lens | Fully Multi-Coated | Waterproof/Nitrogen Purged.\nPITCH: A fantastic, reliable all-rounder. Great balance of magnification and brightness for casual wildlife spotting from the deck." },
+            { category: "Binoculars", name: "Vortex 10x42 Crossfire HD", price: "$149.99", barcode: "998889379", details: "SPECS: 10x Mag | HD Optical System | Roof Prism | Waterproof & Fogproof.\nPITCH: Incredible value. Mention Vortex's famous VIP Lifetime Warranty (unconditional, fully transferable). High definition views at an entry-level price." },
+            { category: "Binoculars", name: "Zeiss 10x42 Terra ED", price: "$499.99", barcode: "998889385", details: "SPECS: 10x Mag | SCHOTT ED Glass | Fast Focus System | Fiberglass-Reinforced Body.\nPITCH: World-renowned Zeiss glass at an accessible price point. Highlight the incredibly smooth, fast-focusing wheel that makes it easy to track moving wildlife like dolphins." },
+
+            // Image 14: MOBILE/CAMERA ACCESSORIES
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "ShiftCam SnapTravel Kit Pro", price: "$149.95", barcode: "999999775" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "ShiftCam SnapGrip Pro", price: "$89.95", barcode: "999999776" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "ShiftCam SnapPocket Light", price: "$39.95", barcode: "999999644" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "ShiftCam SnapStand Selfie", price: "$59.95", barcode: "999999645" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "DJI Osmo Mobile 8", price: "$149.00", barcode: "999999763" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "Anker Powercore 20K MAH 19W", price: "$39.99", barcode: "999999696" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "Anker USB-A to USB-C 6’ Cable", price: "$16.99", barcode: "999999711" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "Anker USB-A to Lightning Cable", price: "$18.99", barcode: "999999762" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "Tile by Life 360 - Tile Slim - 1pk Black", price: "$34.99", barcode: "999999580" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "Tile by Life 360 - Tile Mate - 2pk", price: "$44.99", barcode: "999999581" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "World Travel Adapter - White", price: "$24.95", barcode: "999999578" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "3-in-1 USB & Memory Card Reader", price: "$24.95", barcode: "999999766" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "Micro SD Card w/Adapter - 64GB", price: "$14.95", barcode: "998889461" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "Micro SD Card w/Adapter - 128GB", price: "$19.95", barcode: "998889462" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "Duracell Retail Batteries AA 4 Pack", price: "$7.50", barcode: "998889257" },
+            { category: "MOBILE/CAMERA ACCESSORIES", name: "Duracell Retail Batteries AAA 4 Pack", price: "$7.50", barcode: "998889065" }
+        ];
+
+        // Populate ALL missing barcodes from sequential numbers
+        let startingCode = 901030001;
+        products.forEach((p, index) => {
+            p.id = index; // Safe reference ID
+            if (p.barcode === null) {
+                p.barcode = startingCode.toString();
+                startingCode++;
+            }
+        });
+
+        // --- LOCAL STORAGE INTEGRATION ---
+        function loadSavedData() {
+            const savedBarcodes = JSON.parse(localStorage.getItem('aqua_custom_barcodes') || '{}');
+            const savedPrices = JSON.parse(localStorage.getItem('aqua_custom_prices') || '{}');
+            const savedDetails = JSON.parse(localStorage.getItem('aqua_custom_details') || '{}');
+            
+            products.forEach(p => {
+                if (savedBarcodes[p.id] !== undefined) {
+                    p.barcode = savedBarcodes[p.id];
+                    p.isCustom = true; 
+                } else {
+                    p.isCustom = false;
+                    if(!p.originalBarcode) p.originalBarcode = p.barcode;
+                    p.barcode = p.originalBarcode; 
+                }
+                
+                if (savedPrices[p.id] !== undefined) {
+                    p.customPrice = savedPrices[p.id];
+                } else {
+                    delete p.customPrice;
+                }
+
+                if (savedDetails[p.id] !== undefined) {
+                    p.customDetails = savedDetails[p.id];
+                }
+            });
+        }
+        
+        products.forEach(p => p.originalBarcode = p.barcode);
+        loadSavedData();
+
+        // Elements
+        const tableBodyDesktop = document.getElementById('tableBodyDesktop');
+        const mobileCardsContainer = document.getElementById('mobileCardsContainer');
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const resultCount = document.getElementById('resultCount');
+        const emptyState = document.getElementById('emptyState');
+        const barcodeModal = document.getElementById('barcodeModal');
+        const detailsModal = document.getElementById('detailsModal');
+        const assignModal = document.getElementById('assignModal');
+        const scannerModal = document.getElementById('scannerModal');
+        const editPriceModal = document.getElementById('editPriceModal');
+
+        let currentAssignId = null;
+        let currentEditPriceId = null;
+        let currentViewBarcodeId = null;
+        let scannerMode = 'search';
+
+        // Initialize Categories
+        const categories = [...new Set(products.map(p => p.category))].sort();
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            categoryFilter.appendChild(option);
+        });
+
+        // Event Listeners
+        searchInput.addEventListener('input', filterData);
+        categoryFilter.addEventListener('change', filterData);
+
+        // --- BACKUP & RESTORE FUNCTIONS ---
+        function exportData() {
+            const savedBarcodes = localStorage.getItem('aqua_custom_barcodes') || '{}';
+            const savedPrices = localStorage.getItem('aqua_custom_prices') || '{}';
+            const savedDetails = localStorage.getItem('aqua_custom_details') || '{}';
+            
+            const data = {
+                barcodes: JSON.parse(savedBarcodes),
+                prices: JSON.parse(savedPrices),
+                details: JSON.parse(savedDetails),
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Aqua_PriceList_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.barcodes) localStorage.setItem('aqua_custom_barcodes', JSON.stringify(data.barcodes));
+                    if (data.prices) localStorage.setItem('aqua_custom_prices', JSON.stringify(data.prices));
+                    if (data.details) localStorage.setItem('aqua_custom_details', JSON.stringify(data.details));
+                    
+                    showToast("Backup restored successfully!");
+                    loadSavedData();
+                    filterData();
+                } catch(err) {
+                    showToast("Error reading file. Ensure it is a valid JSON backup.", true);
+                    console.error(err);
+                }
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+
+        // Rendering Function
+        function renderTable(data) {
+            tableBodyDesktop.innerHTML = '';
+            mobileCardsContainer.innerHTML = '';
+            
+            if (data.length === 0) {
+                emptyState.classList.remove('hidden');
+                tableBodyDesktop.parentElement.parentElement.classList.add('hidden');
+                mobileCardsContainer.classList.add('hidden');
+                resultCount.textContent = "0 items found";
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+                tableBodyDesktop.parentElement.parentElement.classList.remove('hidden');
+                mobileCardsContainer.classList.remove('hidden');
+                resultCount.textContent = `Showing ${data.length} item${data.length > 1 ? 's' : ''}`;
+            }
+
+            data.forEach(item => {
+                let barcodeCellDesktop = '';
+                let barcodeBtnMobile = '';
+
+                const displayPrice = item.customPrice ? item.customPrice : item.price;
+                const priceIndicator = item.customPrice ? `<i class="fa-solid fa-asterisk text-[10px] text-orange-400 absolute top-0 -right-2.5" title="Edited Price"></i>` : '';
+
+                if (item.barcode) {
+                    const badgeIcon = item.isCustom ? 'fa-user-check text-emerald-500' : 'fa-barcode text-blue-500';
+                    const buttonLabel = `<i class="fa-solid ${badgeIcon} mr-2"></i> ${item.barcode}`;
+                    const btnClass = item.isCustom ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-blue-200 text-slate-800';
+                    
+                    barcodeCellDesktop = `
+                        <button onclick="openBarcodeModal(${item.id})" 
+                            class="inline-flex items-center justify-center border hover:shadow-sm px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${btnClass}">
+                            ${buttonLabel}
+                        </button>
+                    `;
+                    barcodeBtnMobile = `
+                        <button onclick="openBarcodeModal(${item.id})" 
+                            class="inline-flex items-center border hover:bg-slate-100 px-4 py-2 rounded-lg text-xs font-bold transition-colors ${btnClass}">
+                            <i class="fa-solid ${badgeIcon} mr-2"></i> View
+                        </button>
+                    `;
+                } else {
+                    barcodeCellDesktop = `
+                        <button onclick="openAssignModal(${item.id})" class="inline-flex items-center text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg transition-colors">
+                            <i class="fa-solid fa-plus mr-1"></i> Add Code
+                        </button>
+                    `;
+                    barcodeBtnMobile = `
+                        <button onclick="openAssignModal(${item.id})" class="inline-flex items-center text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg transition-colors">
+                            <i class="fa-solid fa-plus mr-1"></i> Add Code
+                        </button>
+                    `;
+                }
+
+                // 1. POPULATE DESKTOP ROW
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0";
+                tr.innerHTML = `
+                    <td class="p-4 align-top">
+                        <span class="inline-block bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-md font-medium border border-slate-200">
+                            ${item.category}
+                        </span>
+                    </td>
+                    <td class="p-4 align-middle font-semibold text-slate-800">${item.name}</td>
+                    <td class="p-4 align-middle text-right font-extrabold text-blue-600 text-base">
+                        <div class="inline-flex relative items-center justify-end cursor-pointer group hover:bg-blue-50 px-2 py-1 -mr-2 rounded transition-colors" onclick="openEditPriceModal(${item.id})" title="Edit Price">
+                            ${displayPrice}
+                            ${priceIndicator}
+                            <i class="fa-solid fa-pencil-alt text-[10px] text-blue-300 opacity-0 group-hover:opacity-100 ml-2 transition-opacity"></i>
+                        </div>
+                    </td>
+                    <td class="p-4 align-middle text-center">${barcodeCellDesktop}</td>
+                `;
+                tableBodyDesktop.appendChild(tr);
+
+                // 2. POPULATE MOBILE CARD
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3 active:bg-slate-50 transition-all";
+                
+                let badgeHtml = '';
+                if(item.barcode) {
+                     badgeHtml = item.isCustom 
+                        ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Saved</span>` 
+                        : `<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Official</span>`;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start gap-2">
+                        <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">${item.category}</span>
+                        ${badgeHtml}
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-base leading-tight">${item.name}</h4>
+                    </div>
+                    <div class="flex justify-between items-center mt-1 pt-2 border-t border-slate-100">
+                        <div class="relative cursor-pointer hover:bg-slate-50 px-2 py-1 rounded -ml-2 transition-colors inline-flex items-center group" onclick="openEditPriceModal(${item.id})">
+                            <span class="text-lg font-black text-blue-600">${displayPrice}</span>
+                            ${priceIndicator}
+                            <i class="fa-solid fa-pencil-alt text-xs text-slate-300 ml-2"></i>
+                        </div>
+                        ${barcodeBtnMobile}
+                    </div>
+                `;
+                mobileCardsContainer.appendChild(card);
+            });
+        }
+
+        function filterData() {
+            const query = searchInput.value.toLowerCase();
+            const category = categoryFilter.value;
+
+            const filtered = products.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(query) || 
+                                      (item.barcode && item.barcode.includes(query));
+                const matchesCategory = category === 'All' || item.category === category;
+                return matchesSearch && matchesCategory;
+            });
+
+            renderTable(filtered);
+        }
+
+        // --- EDIT PRICE MODAL FUNCTIONS ---
+        function openEditPriceModal(id) {
+            const item = products.find(p => p.id === id);
+            if(!item) return;
+
+            currentEditPriceId = id;
+            document.getElementById('editPriceItemName').textContent = item.name;
+            document.getElementById('editPriceInput').value = item.customPrice ? item.customPrice : item.price;
+            
+            if (item.customPrice) {
+                document.getElementById('resetPriceBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('resetPriceBtn').classList.add('hidden');
+            }
+            
+            editPriceModal.classList.remove('opacity-0', 'pointer-events-none');
+            document.body.classList.add('modal-active');
+        }
+
+        function closeEditPriceModal() {
+            editPriceModal.classList.add('opacity-0', 'pointer-events-none');
+            document.body.classList.remove('modal-active');
+        }
+
+        function saveEditedPrice() {
+            if (currentEditPriceId !== null) {
+                const item = products.find(p => p.id === currentEditPriceId);
+                let newPrice = document.getElementById('editPriceInput').value.trim();
+                
+                if (item && newPrice) {
+                    if (!newPrice.startsWith('$')) newPrice = '$' + newPrice;
+                    
+                    item.customPrice = newPrice;
+                    
+                    const savedPrices = JSON.parse(localStorage.getItem('aqua_custom_prices') || '{}');
+                    savedPrices[item.id] = newPrice;
+                    localStorage.setItem('aqua_custom_prices', JSON.stringify(savedPrices));
+                    
+                    filterData();
+                }
+            }
+            closeEditPriceModal();
+        }
+
+        function resetPrice() {
+            if (currentEditPriceId !== null) {
+                const item = products.find(p => p.id === currentEditPriceId);
+                if (item) {
+                    delete item.customPrice; 
+                    
+                    const savedPrices = JSON.parse(localStorage.getItem('aqua_custom_prices') || '{}');
+                    delete savedPrices[item.id]; 
+                    localStorage.setItem('aqua_custom_prices', JSON.stringify(savedPrices));
+                    
+                    filterData();
+                }
+            }
+            closeEditPriceModal();
+        }
+
+        // --- BARCODE VIEW MODAL FUNCTIONS ---
+        function openBarcodeModal(id) {
+            const item = products.find(p => p.id === id);
+            if(!item || !item.barcode) return;
+            
+            currentViewBarcodeId = id;
+            document.getElementById('modalItemName').textContent = item.name;
+            document.getElementById('modalPrice').textContent = item.customPrice || item.price;
+            
+            // Populate the details preview area
+            const previewText = item.customDetails || item.details || "";
+            const previewDiv = document.getElementById('modalItemDetailsPreview');
+            
+            if(previewText) {
+                previewDiv.textContent = previewText;
+                previewDiv.classList.remove('text-slate-400', 'italic');
+                previewDiv.classList.add('text-slate-700');
+            } else {
+                previewDiv.textContent = "Information blank. Click here to paste or type your own notes, specs, or features...";
+                previewDiv.classList.add('text-slate-400', 'italic');
+                previewDiv.classList.remove('text-slate-700');
+            }
+            
+            const badge = document.getElementById('barcodeTypeBadge');
+            const resetBtn = document.getElementById('resetBarcodeBtn');
+            
+            if(item.isCustom) {
+                badge.className = "text-xs px-2.5 py-1 rounded-full font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800 inline-block mt-2";
+                badge.innerHTML = '<i class="fa-solid fa-user-check mr-1"></i> Saved by You';
+                resetBtn.classList.remove('hidden'); 
+            } else {
+                badge.className = "text-xs px-2.5 py-1 rounded-full font-semibold bg-blue-50 border border-blue-200 text-blue-800 inline-block mt-2";
+                badge.innerHTML = '<i class="fa-solid fa-file-contract mr-1"></i> Official Code';
+                resetBtn.classList.add('hidden'); 
+            }
+            
+            try {
+                if (typeof JsBarcode === 'undefined') throw new Error("JsBarcode missing");
+                JsBarcode("#barcodeCanvas", item.barcode, {
+                    format: "CODE128", 
+                    lineColor: "#000000", // Pure black for max contrast
+                    background: "#ffffff", // Pure white for max contrast
+                    width: 3, // Thicker bars to help laser scanners on screens
+                    height: 90,
+                    displayValue: true, 
+                    fontSize: 16, 
+                    fontOptions: "bold", 
+                    textMargin: 6,
+                    margin: 15 // Important: Wider quiet zones for infrared lasers
+                });
+            } catch (error) {
+                console.error(error);
+                document.getElementById('barcodeCanvas').innerHTML = '<text x="0" y="40" font-family="sans-serif" font-size="14" fill="#ef4444">Visual Error</text>';
+            }
+
+            barcodeModal.classList.remove('opacity-0', 'pointer-events-none');
+            document.body.classList.add('modal-active');
+        }
+
+        function closeBarcodeModal() {
+            barcodeModal.classList.add('opacity-0', 'pointer-events-none');
+            // Only remove body scroll lock if details modal is ALSO closed
+            if (detailsModal.classList.contains('opacity-0')) {
+                document.body.classList.remove('modal-active');
+            }
+        }
+
+        // --- BIG SPECS / DETAILS MODAL FUNCTIONS ---
+        function openDetailsModal() {
+            if (currentViewBarcodeId === null) return;
+            const item = products.find(p => p.id === currentViewBarcodeId);
+            if (!item) return;
+
+            document.getElementById('largeDetailsItemName').textContent = item.name;
+            document.getElementById('largeItemDetails').value = item.customDetails || item.details || "";
+            
+            detailsModal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function closeDetailsModal() {
+            detailsModal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function saveItemDetails() {
+            if (currentViewBarcodeId === null) return;
+            const item = products.find(p => p.id === currentViewBarcodeId);
+            if (!item) return;
+
+            const newDetails = document.getElementById('largeItemDetails').value.trim();
+            
+            // Save to object
+            item.customDetails = newDetails;
+            
+            // Save to localStorage
+            const savedDetails = JSON.parse(localStorage.getItem('aqua_custom_details') || '{}');
+            savedDetails[item.id] = newDetails;
+            localStorage.setItem('aqua_custom_details', JSON.stringify(savedDetails));
+
+            // Instantly update the preview box behind it
+            const previewDiv = document.getElementById('modalItemDetailsPreview');
+            if(newDetails) {
+                previewDiv.textContent = newDetails;
+                previewDiv.classList.remove('text-slate-400', 'italic');
+                previewDiv.classList.add('text-slate-700');
+            } else {
+                previewDiv.textContent = "Information blank. Click here to paste or type your own notes, specs, or features...";
+                previewDiv.classList.add('text-slate-400', 'italic');
+                previewDiv.classList.remove('text-slate-700');
+            }
+
+            closeDetailsModal();
+            showToast("Specs & Notes Saved!");
+        }
+
+        function resetBarcode() {
+            if (currentViewBarcodeId !== null) {
+                const item = products.find(p => p.id === currentViewBarcodeId);
+                if (item && item.isCustom) {
+                    item.barcode = item.originalBarcode; // Revert to original
+                    item.isCustom = false;
+                    
+                    const savedBarcodes = JSON.parse(localStorage.getItem('aqua_custom_barcodes') || '{}');
+                    delete savedBarcodes[item.id]; 
+                    localStorage.setItem('aqua_custom_barcodes', JSON.stringify(savedBarcodes));
+                    
+                    filterData();
+                }
+            }
+            closeBarcodeModal();
+        }
+
+        // --- PRINT LABEL FUNCTION ---
+        function printBarcodeLabel() {
+            if (currentViewBarcodeId === null) return;
+            const item = products.find(p => p.id === currentViewBarcodeId);
+            if (!item) return;
+
+            // Remove any existing print area
+            let oldPrintArea = document.getElementById('printArea');
+            if(oldPrintArea) oldPrintArea.remove();
+
+            const printArea = document.createElement('div');
+            printArea.id = 'printArea';
+            printArea.className = 'print-only';
+            document.body.appendChild(printArea);
+
+            // Generate Avery 5160 grid (3 columns x 10 rows)
+            let html = '<div class="label-sheet">';
+            for(let i=0; i<30; i++) {
+                html += `
+                    <div class="label">
+                        <div class="label-title">${item.name}</div>
+                        <div class="label-price">${item.customPrice || item.price}</div>
+                        <svg id="print-barcode-${i}"></svg>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            printArea.innerHTML = html;
+
+            // Render smaller barcodes tailored for the physical 1" x 2.625" stickers
+            for(let i=0; i<30; i++) {
+                JsBarcode(`#print-barcode-${i}`, item.barcode, {
+                    format: "CODE128",
+                    lineColor: "#000000",
+                    width: 1.5,
+                    height: 35,
+                    displayValue: true,
+                    fontSize: 12,
+                    margin: 5
+                });
+            }
+
+            // Trigger print dialog
+            window.print();
+        }
+
+        // --- ASSIGN BARCODE MODAL FUNCTIONS ---
+        function openAssignModal(id) {
+            const item = products.find(p => p.id === id);
+            if(!item) return;
+
+            currentAssignId = id;
+            document.getElementById('assignItemName').textContent = item.name;
+            document.getElementById('assignInput').value = '';
+            
+            assignModal.classList.remove('opacity-0', 'pointer-events-none');
+            document.body.classList.add('modal-active');
+        }
+
+        function closeAssignModal() {
+            assignModal.classList.add('opacity-0', 'pointer-events-none');
+            if(scannerModal.classList.contains('opacity-0')) {
+                document.body.classList.remove('modal-active');
+            }
+        }
+
+        function saveAssignedBarcode() {
+            const code = document.getElementById('assignInput').value.trim();
+            if (code && currentAssignId !== null) {
+                const item = products.find(p => p.id === currentAssignId);
+                if (item) {
+                    item.barcode = code;
+                    item.isCustom = true;
+                    
+                    const savedBarcodes = JSON.parse(localStorage.getItem('aqua_custom_barcodes') || '{}');
+                    savedBarcodes[item.id] = code;
+                    localStorage.setItem('aqua_custom_barcodes', JSON.stringify(savedBarcodes));
+                    
+                    filterData();
+                }
+            }
+            closeAssignModal();
+        }
+
+        // --- CAMERA & FILE UPLOAD SCANNER ---
+        let html5QrcodeScanner = null;
+
+        function openScanner(mode = 'search') {
+            scannerMode = mode;
+            
+            if(mode === 'search') {
+                document.getElementById('scannerTitle').textContent = "Search using Scanner";
+                document.getElementById('scannerInstruction').textContent = "Point your camera or select an image to scan.";
+            } else {
+                document.getElementById('scannerTitle').textContent = "Scan and Save Code";
+                document.getElementById('scannerInstruction').textContent = "Point the camera or upload an image to save it to the item.";
+            }
+
+            scannerModal.classList.remove('opacity-0', 'pointer-events-none');
+            document.body.classList.add('modal-active');
+            
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "reader",
+                    { 
+                        fps: 15, 
+                        qrbox: { width: 260, height: 160 }, 
+                        rememberLastUsedCamera: true, 
+                        supportedScanTypes: [
+                            Html5QrcodeScanType.SCAN_TYPE_CAMERA,
+                            Html5QrcodeScanType.SCAN_TYPE_FILE
+                        ], 
+                        videoConstraints: { 
+                            facingMode: "environment" 
+                        } 
+                    },
+                    false
+                );
+            }
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function closeScanner() {
+            scannerModal.classList.add('opacity-0', 'pointer-events-none');
+            
+            if(assignModal.classList.contains('opacity-0') && barcodeModal.classList.contains('opacity-0') && detailsModal.classList.contains('opacity-0')) {
+                document.body.classList.remove('modal-active');
+            }
+            
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().catch(e => console.error(e));
+                html5QrcodeScanner = null; 
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            closeScanner();
+            
+            if (scannerMode === 'search') {
+                searchInput.value = decodedText;
+                filterData();
+                searchInput.classList.add('ring-2', 'ring-green-500', 'border-green-500');
+                setTimeout(() => searchInput.classList.remove('ring-2', 'ring-green-500', 'border-green-500'), 1500);
+            } 
+            else if (scannerMode === 'assign') {
+                document.getElementById('assignInput').value = decodedText;
+                const input = document.getElementById('assignInput');
+                input.classList.add('ring-2', 'ring-green-500', 'border-green-500');
+                setTimeout(() => input.classList.remove('ring-2', 'ring-green-500', 'border-green-500'), 1000);
+            }
+        }
+
+        function onScanFailure(error) { /* Ignore continuous warnings */ }
+
+        // Initial render
+        renderTable(products);
+    </script>
+</body>
+</html>
