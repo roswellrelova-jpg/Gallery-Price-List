@@ -205,8 +205,8 @@
                     <div id="productImagePreview" class="w-full h-48 sm:h-64 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-100 transition-colors relative group" onclick="document.getElementById('imageUploader').click()">
                         <!-- Content populated by JS -->
                     </div>
-                    <!-- capture="environment" tries to open back camera on mobile automatically -->
-                    <input type="file" id="imageUploader" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)">
+                    <!-- The capture="environment" tag has been removed to allow File/Gallery uploading from Mobile -->
+                    <input type="file" id="imageUploader" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
                     <p class="text-xs text-slate-400 mt-2 text-center">Images are automatically resized to save space.</p>
                 </div>
 
