@@ -77,9 +77,14 @@
                         </div>
                         <input type="text" id="searchInput" class="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Search for item or barcode...">
                     </div>
-                    <button onclick="openScanner('search')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center justify-center" title="Scan Barcode">
-                        <i class="fa-solid fa-camera mr-2"></i>
-                        <span class="text-sm font-semibold">Scan</span>
+                    <!-- NEW DISCOUNTS BUTTON -->
+                    <button onclick="openDiscountModal()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center" title="Latitude Discounts">
+                        <i class="fa-solid fa-tags sm:mr-2"></i>
+                        <span class="text-sm font-semibold hidden sm:inline">Discounts</span>
+                    </button>
+                    <button onclick="openScanner('search')" class="bg-blue-600 text-white px-3 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center justify-center" title="Scan Barcode">
+                        <i class="fa-solid fa-camera sm:mr-2"></i>
+                        <span class="text-sm font-semibold hidden sm:inline">Scan</span>
                     </button>
                 </div>
 
@@ -178,44 +183,51 @@
         </div>
     </div>
 
-    <!-- Item Details Expanded Modal (NEW BIG WINDOW WITH CAMERA) -->
+    <!-- Item Details Expanded Modal (UI UPDATED TO MATCH SCREENSHOT) -->
     <div id="detailsModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[70]">
         <div class="absolute w-full h-full bg-slate-900 opacity-70 modal-overlay cursor-pointer" onclick="closeDetailsModal()"></div>
         
-        <div class="bg-white w-11/12 md:max-w-3xl mx-auto rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col h-[90vh]">
-            <div class="flex justify-between items-center pb-3 p-5 border-b border-slate-100 flex-shrink-0 bg-slate-50">
+        <div class="bg-slate-50 w-11/12 md:max-w-3xl mx-auto rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col h-[90vh]">
+            <div class="flex justify-between items-center pb-3 p-5 border-b border-slate-200 flex-shrink-0 bg-white">
                 <div>
-                    <p class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-list-check text-blue-600"></i> Specs & Image
+                    <p class="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-blue-800"></i> Specs & Image
                     </p>
-                    <p id="largeDetailsItemName" class="text-sm text-slate-600 font-semibold mt-1"></p>
+                    <p id="largeDetailsItemName" class="text-sm text-slate-600 font-bold mt-1"></p>
                 </div>
-                <div class="modal-close cursor-pointer z-50 p-2 text-slate-400 hover:text-slate-600 transition-colors bg-white rounded-full shadow-sm" onclick="closeDetailsModal()">
-                    <i class="fa-solid fa-times text-xl"></i>
+                <div class="modal-close cursor-pointer z-50 flex items-center justify-center w-8 h-8 text-slate-400 hover:text-slate-600 transition-colors bg-white rounded-full shadow-sm border border-slate-200" onclick="closeDetailsModal()">
+                    <i class="fa-solid fa-times text-lg"></i>
                 </div>
             </div>
             
-            <div class="p-5 flex-grow flex flex-col bg-slate-100 overflow-y-auto gap-4">
+            <div class="p-5 flex-grow flex flex-col overflow-y-auto gap-4">
                 
-                <!-- New Image Upload/Capture Section -->
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                    <label class="block text-sm font-bold text-slate-700 mb-2">
-                        <i class="fa-solid fa-camera text-slate-400 mr-1"></i> Product Image
-                    </label>
-                    <div id="productImagePreview" class="w-full h-48 sm:h-64 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-100 transition-colors relative group" onclick="document.getElementById('imageUploader').click()">
-                        <!-- Content populated by JS -->
+                <!-- Match Screenshot Image Upload Section -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                    <div class="p-3 bg-white border-b border-slate-100 flex items-center">
+                        <label class="block text-sm font-bold text-slate-700 flex items-center">
+                            <i class="fa-solid fa-camera text-slate-500 mr-2"></i> Product Image
+                        </label>
                     </div>
-                    <!-- The capture="environment" tag has been removed to allow File/Gallery uploading from Mobile -->
-                    <input type="file" id="imageUploader" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
-                    <p class="text-xs text-slate-400 mt-2 text-center">Images are automatically resized to save space.</p>
+                    
+                    <div class="p-4 flex flex-col items-center">
+                        <div id="productImagePreview" class="w-full h-48 sm:h-64 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-100 transition-colors relative group" onclick="document.getElementById('imageUploader').click()">
+                            <!-- Default UI matching screenshot -->
+                            <i class="fa-solid fa-camera text-slate-400 text-3xl mb-2"></i>
+                            <span class="text-sm text-blue-500 hover:text-blue-600 font-medium cursor-pointer">Click to Take Photo or Upload</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-3 text-center w-full">Images are automatically resized to save space.</p>
+                        <!-- Notice: capture="environment" is REMOVED to allow gallery choice -->
+                        <input type="file" id="imageUploader" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                    </div>
                 </div>
 
                 <!-- Specs Textarea -->
-                <textarea id="largeItemDetails" class="w-full flex-grow min-h-[150px] text-sm md:text-base p-5 border border-slate-300 rounded-xl bg-white focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all resize-none font-medium text-slate-700 leading-relaxed shadow-sm" placeholder="Type or paste comprehensive specifications, features, and your sales pitch here..."></textarea>
+                <textarea id="largeItemDetails" class="w-full flex-grow min-h-[150px] text-sm md:text-base p-5 border border-slate-200 rounded-xl bg-white focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all resize-none font-medium text-slate-700 leading-relaxed shadow-sm" placeholder="Type or paste comprehensive specifications, features, and your sales pitch here..."></textarea>
             </div>
             
             <div class="flex justify-end gap-3 pt-3 p-5 border-t border-slate-200 bg-white flex-shrink-0">
-                <button onclick="closeDetailsModal()" class="px-5 bg-slate-100 py-2.5 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors font-bold text-sm">Cancel</button>
+                <button onclick="closeDetailsModal()" class="px-5 bg-slate-100 py-2.5 rounded-lg text-slate-700 hover:bg-slate-200 transition-colors font-bold text-sm">Cancel</button>
                 <button onclick="saveItemDetails()" class="px-6 bg-blue-600 py-2.5 rounded-lg text-white hover:bg-blue-700 transition-colors font-bold text-sm flex items-center gap-2 shadow-md">
                     <i class="fa-solid fa-floppy-disk"></i> Save Info
                 </button>
@@ -223,7 +235,7 @@
         </div>
     </div>
 
-    <!-- Barcode View Modal -->
+    <!-- Barcode View Modal (Updated Badge and Removed Tips) -->
     <div id="barcodeModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
         <div class="absolute w-full h-full bg-slate-900 opacity-50 modal-overlay cursor-pointer" onclick="closeBarcodeModal()"></div>
         
@@ -236,32 +248,28 @@
             </div>
             
             <div class="p-6 text-center flex flex-col items-center justify-center">
+                <!-- UI Matched Badge -->
+                <div id="barcodeTypeBadge" class="mb-5">
+                    <!-- Javascript populates this perfectly matching the screenshot -->
+                </div>
+                
                 <!-- Barcode rendering -->
                 <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm mb-4 w-full flex justify-center min-h-[140px]">
                     <svg id="barcodeCanvas"></svg>
                 </div>
+                
                 <p id="modalPrice" class="text-3xl font-extrabold text-blue-600 mb-1"></p>
                 <p id="modalItemName" class="text-base font-medium text-slate-800 mb-2"></p>
-                <div id="barcodeTypeBadge" class="text-xs px-2.5 py-1 rounded-full font-semibold inline-block mt-2"></div>
 
-                <!-- NEW Image Preview Display in Barcode Modal -->
+                <!-- Image Preview Display in Barcode Modal -->
                 <div id="modalImagePreviewContainer" class="mt-4 w-full hidden">
                     <img id="modalImagePreview" class="w-full h-32 object-contain bg-slate-50 rounded-lg border border-slate-200">
                 </div>
                 
-                <div class="mt-5 w-full bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-left shadow-sm">
-                    <p class="text-xs font-bold text-yellow-800 mb-1"><i class="fa-solid fa-lightbulb mr-1 text-yellow-500"></i> Scanning on Phones / Glass:</p>
-                    <ul class="text-[11px] text-yellow-700 list-disc pl-4 space-y-0.5 font-medium">
-                        <li>Turn screen brightness to <b>maximum</b>.</li>
-                        <li><b>Tilt the phone slightly (15-30°)</b> so the red laser glare bounces away from the scanner, not directly back into it.</li>
-                    </ul>
-                </div>
+                <!-- Removed Scanning Tips Section per request -->
 
                 <!-- Product Specs & Pitch Area (Clickable Preview) -->
                 <div class="mt-5 w-full text-left">
-                    <label class="flex justify-between items-end text-xs font-bold text-slate-700 mb-1.5 px-1">
-                        <span><i class="fa-solid fa-list-check mr-1 text-blue-500"></i> Specs & Photos</span>
-                    </label>
                     <div onclick="openDetailsModal()" class="w-full text-xs p-3.5 border border-slate-300 rounded-xl bg-white hover:bg-blue-50 hover:border-blue-400 hover:shadow-md cursor-pointer transition-all relative group min-h-[90px]">
                         <div id="modalItemDetailsPreview" class="whitespace-pre-wrap line-clamp-3 overflow-hidden font-medium leading-relaxed"></div>
                         <div class="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl backdrop-blur-[1px]">
@@ -334,6 +342,161 @@
             <div class="p-4 overflow-y-auto flex-grow">
                 <div id="reader" class="w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50 min-h-[250px] p-2"></div>
                 <p class="text-sm text-center text-slate-500 mt-4" id="scannerInstruction">Point your camera or select an image to scan.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Latitude Discount Modal -->
+    <div id="discountModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[90]">
+        <div class="absolute w-full h-full bg-slate-900 opacity-70 modal-overlay cursor-pointer" onclick="closeDiscountModal()"></div>
+        
+        <div class="bg-white w-11/12 md:max-w-3xl mx-auto rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center pb-3 p-5 border-b border-slate-100 flex-shrink-0 bg-indigo-50">
+                <div>
+                    <p class="text-xl font-extrabold text-indigo-900 flex items-center gap-2">
+                        <i class="fa-solid fa-percent text-indigo-600"></i> Latitude Discounts
+                    </p>
+                    <p class="text-xs text-indigo-700 font-medium mt-1">
+                        Silver (20%) | Gold (25%) | Plat, Sapphire, Diamond, Ambassador (30%)
+                    </p>
+                </div>
+                <div class="modal-close cursor-pointer z-50 p-2 text-indigo-400 hover:text-indigo-600 transition-colors bg-white rounded-full shadow-sm" onclick="closeDiscountModal()">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </div>
+            </div>
+            
+            <div class="p-5 overflow-y-auto flex-grow bg-slate-50 space-y-6">
+                <p class="text-sm text-slate-600 font-medium">Latitude Discounts only apply for photos and packages.</p>
+                
+                <!-- Package Discount Table -->
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="bg-slate-800 text-white p-3 font-bold text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-images text-slate-300"></i> PACKAGE DISCOUNT
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200 text-xs">
+                                    <th class="p-3 font-bold text-center">#</th>
+                                    <th class="p-3 font-bold">Reg $</th>
+                                    <th class="p-3 font-bold text-slate-800 bg-slate-200/50">20%</th>
+                                    <th class="p-3 font-bold text-yellow-700 bg-yellow-50">25%</th>
+                                    <th class="p-3 font-bold text-indigo-700 bg-indigo-50">30%</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 font-medium">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-center">5</td>
+                                    <td class="p-3 text-slate-500">$149.00</td>
+                                    <td class="p-3 bg-slate-50 font-bold">$119.20</td>
+                                    <td class="p-3 bg-yellow-50/50 font-bold text-yellow-900">$111.75</td>
+                                    <td class="p-3 bg-indigo-50/50 font-bold text-indigo-900">$104.30</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-center">8</td>
+                                    <td class="p-3 text-slate-500">$199.00</td>
+                                    <td class="p-3 bg-slate-50 font-bold">$159.20</td>
+                                    <td class="p-3 bg-yellow-50/50 font-bold text-yellow-900">$149.25</td>
+                                    <td class="p-3 bg-indigo-50/50 font-bold text-indigo-900">$139.30</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-center">12</td>
+                                    <td class="p-3 text-slate-500">$249.00</td>
+                                    <td class="p-3 bg-slate-50 font-bold">$199.20</td>
+                                    <td class="p-3 bg-yellow-50/50 font-bold text-yellow-900">$186.75</td>
+                                    <td class="p-3 bg-indigo-50/50 font-bold text-indigo-900">$174.30</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-center">24</td>
+                                    <td class="p-3 text-slate-500">$349.00</td>
+                                    <td class="p-3 bg-slate-50 font-bold">$279.20</td>
+                                    <td class="p-3 bg-yellow-50/50 font-bold text-yellow-900">$261.75</td>
+                                    <td class="p-3 bg-indigo-50/50 font-bold text-indigo-900">$244.30</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-center">48</td>
+                                    <td class="p-3 text-slate-500">$449.00</td>
+                                    <td class="p-3 bg-slate-50 font-bold">$359.20</td>
+                                    <td class="p-3 bg-yellow-50/50 font-bold text-yellow-900">$336.75</td>
+                                    <td class="p-3 bg-indigo-50/50 font-bold text-indigo-900">$314.30</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Dining Pricing Table -->
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="bg-slate-700 text-white p-3 font-bold text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-utensils text-slate-300"></i> DINING PRICING
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200 text-xs">
+                                    <th class="p-3 font-bold text-center">#</th>
+                                    <th class="p-3 font-bold">Reg $</th>
+                                    <th class="p-3 font-bold text-slate-800 bg-slate-200/50">20%</th>
+                                    <th class="p-3 font-bold text-yellow-700 bg-yellow-50">25%</th>
+                                    <th class="p-3 font-bold text-indigo-700 bg-indigo-50">30%</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 font-medium">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-center">1</td>
+                                    <td class="p-3 text-slate-500">$29.95</td>
+                                    <td class="p-3 bg-slate-50 font-bold">$23.96</td>
+                                    <td class="p-3 bg-yellow-50/50 font-bold text-yellow-900">$22.46</td>
+                                    <td class="p-3 bg-indigo-50/50 font-bold text-indigo-900">$20.97</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-center">2</td>
+                                    <td class="p-3 text-slate-500">$59.90</td>
+                                    <td class="p-3 bg-slate-50 font-bold">$47.92</td>
+                                    <td class="p-3 bg-yellow-50/50 font-bold text-yellow-900">$44.92</td>
+                                    <td class="p-3 bg-indigo-50/50 font-bold text-indigo-900">$41.94</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-center">3</td>
+                                    <td class="p-3 text-slate-500">$89.85</td>
+                                    <td class="p-3 bg-slate-50 font-bold">$71.88</td>
+                                    <td class="p-3 bg-yellow-50/50 font-bold text-yellow-900">$67.38</td>
+                                    <td class="p-3 bg-indigo-50/50 font-bold text-indigo-900">$62.91</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-center">4</td>
+                                    <td class="p-3 text-slate-500">$119.80</td>
+                                    <td class="p-3 bg-slate-50 font-bold">$95.84</td>
+                                    <td class="p-3 bg-yellow-50/50 font-bold text-yellow-900">$89.84</td>
+                                    <td class="p-3 bg-indigo-50/50 font-bold text-indigo-900">$83.88</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Savings Logic Pitch -->
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
+                    <p class="font-bold text-emerald-800 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-lightbulb text-emerald-500 text-lg"></i> SAVINGS PITCH
+                    </p>
+                    <p class="text-xs text-emerald-700 mb-3">It’s important to remember the savings the guest receives per package. They save on the number of images per package when calculated at <strong>$50 per print & digital</strong>.</p>
+                    
+                    <ul class="space-y-2 text-sm font-medium text-emerald-900">
+                        <li class="flex items-start"><i class="fa-solid fa-check text-emerald-500 mt-1 mr-2"></i> <span><strong>Basic:</strong> Save $100 (5x Prints & Digital at $50 each) – <span class="bg-emerald-200 px-1 rounded">plus 1 FREE Photo & Digital</span></span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-check text-emerald-500 mt-1 mr-2"></i> <span><strong>Deluxe:</strong> Save $200 (8x Prints & Digital at $50 each) – <span class="bg-emerald-200 px-1 rounded">plus 2 FREE Photo & Digital</span></span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-check text-emerald-500 mt-1 mr-2"></i> <span><strong>Premium:</strong> Save $350 (12x Prints & Digital at $50 each) – <span class="bg-emerald-200 px-1 rounded">plus 3 FREE Photo & Digital</span></span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-check text-emerald-500 mt-1 mr-2"></i> <span><strong>Ultimate:</strong> Save $850 (24x Prints & Digital at $50 each) – <span class="bg-emerald-200 px-1 rounded">plus 5 FREE Photo & Digital</span></span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-check text-emerald-500 mt-1 mr-2"></i> <span><strong>Digi Max:</strong> Save $750 (48x Digitals) – <span class="bg-emerald-200 px-1 rounded">plus 5 FREE Digitals</span></span></li>
+                    </ul>
+                </div>
+
+            </div>
+            
+            <div class="flex justify-end p-4 border-t border-slate-200 bg-white flex-shrink-0">
+                <button onclick="closeDiscountModal()" class="px-6 bg-slate-800 py-2.5 rounded-lg text-white hover:bg-slate-700 transition-colors font-bold text-sm shadow-md w-full sm:w-auto">
+                    Close Guide
+                </button>
             </div>
         </div>
     </div>
@@ -952,12 +1115,16 @@
             const resetBtn = document.getElementById('resetBarcodeBtn');
             
             if(item.isCustom) {
-                badge.className = "text-xs px-2.5 py-1 rounded-full font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800 inline-block mt-2";
-                badge.innerHTML = '<i class="fa-solid fa-user-check mr-1"></i> Saved by You';
+                badge.innerHTML = `
+                    <div class="inline-flex items-center justify-center px-4 py-1.5 bg-emerald-50 border border-emerald-100 rounded-full text-emerald-700 text-sm font-bold shadow-sm">
+                        <i class="fa-solid fa-user-check mr-2"></i> Saved by You
+                    </div>`;
                 resetBtn.classList.remove('hidden'); 
             } else {
-                badge.className = "text-xs px-2.5 py-1 rounded-full font-semibold bg-blue-50 border border-blue-200 text-blue-800 inline-block mt-2";
-                badge.innerHTML = '<i class="fa-solid fa-file-contract mr-1"></i> Official Code';
+                badge.innerHTML = `
+                    <div class="inline-flex items-center justify-center px-4 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-blue-700 text-sm font-bold shadow-sm">
+                        <i class="fa-solid fa-file-contract mr-2"></i> Official Code
+                    </div>`;
                 resetBtn.classList.add('hidden'); 
             }
             
@@ -1001,7 +1168,7 @@
             document.getElementById('largeDetailsItemName').textContent = item.name;
             document.getElementById('largeItemDetails').value = item.customDetails || item.details || "";
             
-            // Set Image Preview
+            // Set Image Preview Matching Screenshot
             const previewBox = document.getElementById('productImagePreview');
             if (item.customImage) {
                 previewBox.innerHTML = `
@@ -1012,8 +1179,8 @@
                 `;
             } else {
                 previewBox.innerHTML = `
-                    <i class="fa-solid fa-camera text-slate-400 text-4xl mb-2"></i>
-                    <span class="text-sm text-slate-500 font-medium">Click to Take Photo or Upload</span>
+                    <i class="fa-solid fa-camera text-slate-400 text-3xl mb-2"></i>
+                    <span class="text-sm text-blue-500 hover:text-blue-600 font-medium cursor-pointer">Click to Take Photo or Upload</span>
                 `;
             }
 
@@ -1292,6 +1459,19 @@
         }
 
         function onScanFailure(error) { /* Ignore continuous warnings */ }
+
+        // --- DISCOUNT MODAL FUNCTIONS ---
+        function openDiscountModal() {
+            document.getElementById('discountModal').classList.remove('opacity-0', 'pointer-events-none');
+            document.body.classList.add('modal-active');
+        }
+
+        function closeDiscountModal() {
+            document.getElementById('discountModal').classList.add('opacity-0', 'pointer-events-none');
+            if(assignModal.classList.contains('opacity-0') && barcodeModal.classList.contains('opacity-0') && detailsModal.classList.contains('opacity-0') && scannerModal.classList.contains('opacity-0')) {
+                document.body.classList.remove('modal-active');
+            }
+        }
 
         // Initial render
         renderTable(products);
