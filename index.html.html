@@ -168,34 +168,42 @@
         </div>
     </div>
 
-    <!-- Edit Price Modal -->
-    <div id="editPriceModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
-        <div class="absolute w-full h-full bg-slate-900 opacity-50 modal-overlay cursor-pointer" onclick="closeEditPriceModal()"></div>
+    <!-- Edit Item Modal (Upgraded from Price Modal) -->
+    <datalist id="categoryDatalist"></datalist>
+    <div id="editItemModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[80]">
+        <div class="absolute w-full h-full bg-slate-900 opacity-50 modal-overlay cursor-pointer" onclick="closeEditItemModal()"></div>
         
         <div class="bg-white w-11/12 md:max-w-md mx-auto rounded-xl shadow-2xl z-50 overflow-y-auto">
             <div class="flex justify-between items-center pb-3 p-5 border-b border-slate-100">
-                <p class="text-lg font-bold text-slate-800">Edit Price</p>
-                <div class="modal-close cursor-pointer z-50 p-2 text-slate-400 hover:text-slate-600 transition-colors" onclick="closeEditPriceModal()">
+                <p class="text-lg font-bold text-slate-800">Edit Item Details</p>
+                <div class="modal-close cursor-pointer z-50 p-2 text-slate-400 hover:text-slate-600 transition-colors" onclick="closeEditItemModal()">
                     <i class="fa-solid fa-times text-xl"></i>
                 </div>
             </div>
             
-            <div class="p-5">
-                <p class="text-sm text-slate-500 mb-1">Item:</p>
-                <p id="editPriceItemName" class="font-bold text-slate-800 text-lg mb-4 leading-tight"></p>
-                
-                <label class="block text-sm font-medium text-slate-700 mb-2">New Price</label>
-                <div class="relative">
-                    <input type="text" id="editPriceInput" class="w-full px-3 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-blue-600 text-lg" placeholder="$0.00">
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                    <input type="text" id="editItemCategory" list="categoryDatalist" class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Item Name</label>
+                    <input type="text" id="editItemName" class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-800 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Price</label>
+                    <div class="relative">
+                        <input type="text" id="editItemPrice" class="w-full px-3 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-blue-600 text-lg" placeholder="$0.00">
+                    </div>
                 </div>
             </div>
             
             <div class="flex justify-end items-center gap-2 pt-2 p-5 border-t border-slate-100">
-                <button id="resetPriceBtn" onclick="resetPrice()" class="mr-auto px-3 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors font-medium text-xs hidden">
+                <button id="resetItemBtn" onclick="resetItem()" class="mr-auto px-3 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors font-medium text-xs hidden">
                     <i class="fa-solid fa-rotate-left mr-1"></i> Revert
                 </button>
-                <button onclick="closeEditPriceModal()" class="px-4 py-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors font-medium text-sm">Cancel</button>
-                <button onclick="saveEditedPrice()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">Save</button>
+                <button onclick="closeEditItemModal()" class="px-4 py-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors font-medium text-sm">Cancel</button>
+                <button onclick="saveEditedItem()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">Save</button>
             </div>
         </div>
     </div>
@@ -795,6 +803,8 @@
         function loadSavedData() {
             const savedBarcodes = JSON.parse(localStorage.getItem('aqua_custom_barcodes') || '{}');
             const savedPrices = JSON.parse(localStorage.getItem('aqua_custom_prices') || '{}');
+            const savedNames = JSON.parse(localStorage.getItem('aqua_custom_names') || '{}');
+            const savedCategories = JSON.parse(localStorage.getItem('aqua_custom_categories') || '{}');
             const savedDetails = JSON.parse(localStorage.getItem('aqua_custom_details') || '{}');
             const savedImages = JSON.parse(localStorage.getItem('aqua_custom_images') || '{}'); 
             
@@ -808,11 +818,14 @@
                     p.barcode = p.originalBarcode; 
                 }
                 
-                if (savedPrices[p.id] !== undefined) {
-                    p.customPrice = savedPrices[p.id];
-                } else {
-                    delete p.customPrice;
-                }
+                if (savedPrices[p.id] !== undefined) p.customPrice = savedPrices[p.id];
+                else delete p.customPrice;
+
+                if (savedNames[p.id] !== undefined) p.customName = savedNames[p.id];
+                else delete p.customName;
+
+                if (savedCategories[p.id] !== undefined) p.customCategory = savedCategories[p.id];
+                else delete p.customCategory;
 
                 if (savedDetails[p.id] !== undefined) {
                     p.customDetails = savedDetails[p.id];
@@ -839,21 +852,38 @@
         const detailsModal = document.getElementById('detailsModal');
         const assignModal = document.getElementById('assignModal');
         const scannerModal = document.getElementById('scannerModal');
-        const editPriceModal = document.getElementById('editPriceModal');
+        const editItemModal = document.getElementById('editItemModal'); // Updated
 
         let currentAssignId = null;
-        let currentEditPriceId = null;
+        let currentEditItemId = null; // Updated
         let currentViewBarcodeId = null;
         let scannerMode = 'search';
 
-        // Initialize Categories
-        const categories = [...new Set(products.map(p => p.category))].sort();
-        categories.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat;
-            option.textContent = cat;
-            categoryFilter.appendChild(option);
-        });
+        // Initialize Categories dynamically
+        function updateCategoryDropdowns() {
+            const allCategories = [...new Set(products.map(p => p.customCategory || p.category))].sort();
+            
+            const currentFilter = categoryFilter.value;
+            categoryFilter.innerHTML = '<option value="All">All Categories</option>';
+            allCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                categoryFilter.appendChild(option);
+            });
+            categoryFilter.value = currentFilter && allCategories.includes(currentFilter) ? currentFilter : 'All';
+
+            const datalist = document.getElementById('categoryDatalist');
+            if (datalist) {
+                datalist.innerHTML = '';
+                allCategories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    datalist.appendChild(option);
+                });
+            }
+        }
+        updateCategoryDropdowns();
 
         // Event Listeners
         searchInput.addEventListener('input', filterData);
@@ -864,12 +894,16 @@
         function exportData() {
             const savedBarcodes = localStorage.getItem('aqua_custom_barcodes') || '{}';
             const savedPrices = localStorage.getItem('aqua_custom_prices') || '{}';
+            const savedNames = localStorage.getItem('aqua_custom_names') || '{}';
+            const savedCategories = localStorage.getItem('aqua_custom_categories') || '{}';
             const savedDetails = localStorage.getItem('aqua_custom_details') || '{}';
             const savedImages = localStorage.getItem('aqua_custom_images') || '{}';
             
             const data = {
                 barcodes: JSON.parse(savedBarcodes),
                 prices: JSON.parse(savedPrices),
+                names: JSON.parse(savedNames),
+                categories: JSON.parse(savedCategories),
                 details: JSON.parse(savedDetails),
                 images: JSON.parse(savedImages),
                 exportDate: new Date().toISOString()
@@ -897,11 +931,14 @@
                     const data = JSON.parse(e.target.result);
                     if (data.barcodes) localStorage.setItem('aqua_custom_barcodes', JSON.stringify(data.barcodes));
                     if (data.prices) localStorage.setItem('aqua_custom_prices', JSON.stringify(data.prices));
+                    if (data.names) localStorage.setItem('aqua_custom_names', JSON.stringify(data.names));
+                    if (data.categories) localStorage.setItem('aqua_custom_categories', JSON.stringify(data.categories));
                     if (data.details) localStorage.setItem('aqua_custom_details', JSON.stringify(data.details));
                     if (data.images) localStorage.setItem('aqua_custom_images', JSON.stringify(data.images));
                     
                     showToast("Backup restored successfully!");
                     loadSavedData();
+                    updateCategoryDropdowns();
                     filterData();
                 } catch(err) {
                     showToast("Error reading file. Ensure it is a valid JSON backup.", true);
@@ -936,13 +973,16 @@
                 let barcodeCellDesktop = '';
                 let barcodeBtnMobile = '';
 
+                const displayName = item.customName || item.name;
+                const displayCategory = item.customCategory || item.category;
+                
                 let basePrice = item.customPrice ? item.customPrice : item.price;
                 let finalPriceStr = basePrice;
-                let priceIndicator = item.customPrice ? `<i class="fa-solid fa-asterisk text-[10px] text-orange-400 absolute top-0 -right-2.5" title="Edited Price"></i>` : '';
+                let priceIndicator = (item.customPrice || item.customName || item.customCategory) ? `<i class="fa-solid fa-asterisk text-[10px] text-orange-400 absolute top-0 -right-2.5" title="Edited Item"></i>` : '';
                 let textColorClass = "text-blue-600";
 
                 // Apply Latitude Discount
-                const isDiscountable = ['Free At Sea Packages', 'Photo Packages'].includes(item.category) || item.name === "Single Print & Digital";
+                const isDiscountable = ['Free At Sea Packages', 'Photo Packages'].includes(displayCategory) || displayName === "Single Print & Digital";
                 if (latitudeDiscount > 0 && isDiscountable) {
                     const numericPrice = parseFloat(basePrice.replace(/[\$,]/g, ''));
                     if (!isNaN(numericPrice)) {
@@ -989,12 +1029,15 @@
                 tr.innerHTML = `
                     <td class="p-4 align-top">
                         <span class="inline-block bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-md font-medium border border-slate-200">
-                            ${item.category}
+                            ${displayCategory}
                         </span>
                     </td>
-                    <td class="p-4 align-middle font-semibold text-slate-800">${item.name}</td>
+                    <td class="p-4 align-middle font-semibold text-slate-800 group">
+                        ${displayName}
+                        <i class="fa-solid fa-pencil-alt text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 ml-2 cursor-pointer hover:text-blue-500 transition-all" onclick="openEditItemModal(${item.id})" title="Edit Item Info"></i>
+                    </td>
                     <td class="p-4 align-middle text-right font-extrabold ${textColorClass} text-base">
-                        <div class="inline-flex relative items-center justify-end cursor-pointer group hover:bg-slate-100 px-2 py-1 -mr-2 rounded transition-colors" onclick="openEditPriceModal(${item.id})" title="Edit Price">
+                        <div class="inline-flex relative items-center justify-end cursor-pointer group hover:bg-slate-100 px-2 py-1 -mr-2 rounded transition-colors" onclick="openEditItemModal(${item.id})" title="Edit Item">
                             ${finalPriceStr}
                             ${priceIndicator}
                             <i class="fa-solid fa-pencil-alt text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 ml-2 transition-opacity"></i>
@@ -1017,17 +1060,18 @@
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start gap-2">
-                        <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">${item.category}</span>
+                        <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">${displayCategory}</span>
                         ${badgeHtml}
                     </div>
-                    <div>
-                        <h4 class="font-bold text-slate-800 text-base leading-tight">${item.name}</h4>
+                    <div class="flex justify-between items-center group cursor-pointer" onclick="openEditItemModal(${item.id})">
+                        <h4 class="font-bold text-slate-800 text-base leading-tight">${displayName}</h4>
+                        <i class="fa-solid fa-pencil-alt text-xs text-slate-300 opacity-50 group-hover:opacity-100 ml-2"></i>
                     </div>
                     <div class="flex justify-between items-center mt-1 pt-2 border-t border-slate-100">
-                        <div class="relative cursor-pointer hover:bg-slate-50 px-2 py-1 rounded -ml-2 transition-colors inline-flex items-center group" onclick="openEditPriceModal(${item.id})">
+                        <div class="relative cursor-pointer hover:bg-slate-50 px-2 py-1 rounded -ml-2 transition-colors inline-flex items-center group" onclick="openEditItemModal(${item.id})">
                             <span class="text-lg font-black ${textColorClass}">${finalPriceStr}</span>
                             ${priceIndicator}
-                            <i class="fa-solid fa-pencil-alt text-xs text-slate-300 ml-3"></i>
+                            <i class="fa-solid fa-pencil-alt text-xs text-slate-300 ml-3 opacity-0 group-hover:opacity-100"></i>
                         </div>
                         ${barcodeBtnMobile}
                     </div>
@@ -1041,73 +1085,118 @@
             const category = categoryFilter.value;
 
             const filtered = products.filter(item => {
-                const matchesSearch = item.name.toLowerCase().includes(query) || 
+                const searchName = (item.customName || item.name).toLowerCase();
+                const searchCategory = item.customCategory || item.category;
+                const matchesSearch = searchName.includes(query) || 
                                       (item.barcode && item.barcode.includes(query));
-                const matchesCategory = category === 'All' || item.category === category;
+                const matchesCategory = category === 'All' || searchCategory === category;
                 return matchesSearch && matchesCategory;
             });
 
             renderTable(filtered);
         }
 
-        // --- EDIT PRICE MODAL FUNCTIONS ---
-        function openEditPriceModal(id) {
+        // --- EDIT ITEM MODAL FUNCTIONS ---
+        function openEditItemModal(id) {
             const item = products.find(p => p.id === id);
             if(!item) return;
 
-            currentEditPriceId = id;
-            document.getElementById('editPriceItemName').textContent = item.name;
-            document.getElementById('editPriceInput').value = item.customPrice ? item.customPrice : item.price;
+            currentEditItemId = id;
+            document.getElementById('editItemCategory').value = item.customCategory || item.category;
+            document.getElementById('editItemName').value = item.customName || item.name;
+            document.getElementById('editItemPrice').value = item.customPrice || item.price;
             
-            if (item.customPrice) {
-                document.getElementById('resetPriceBtn').classList.remove('hidden');
+            if (item.customPrice || item.customName || item.customCategory) {
+                document.getElementById('resetItemBtn').classList.remove('hidden');
             } else {
-                document.getElementById('resetPriceBtn').classList.add('hidden');
+                document.getElementById('resetItemBtn').classList.add('hidden');
             }
             
-            editPriceModal.classList.remove('opacity-0', 'pointer-events-none');
+            editItemModal.classList.remove('opacity-0', 'pointer-events-none');
             document.body.classList.add('modal-active');
         }
 
-        function closeEditPriceModal() {
-            editPriceModal.classList.add('opacity-0', 'pointer-events-none');
+        function closeEditItemModal() {
+            editItemModal.classList.add('opacity-0', 'pointer-events-none');
             document.body.classList.remove('modal-active');
         }
 
-        function saveEditedPrice() {
-            if (currentEditPriceId !== null) {
-                const item = products.find(p => p.id === currentEditPriceId);
-                let newPrice = document.getElementById('editPriceInput').value.trim();
-                
-                if (item && newPrice) {
-                    if (!newPrice.startsWith('$')) newPrice = '$' + newPrice;
+        function saveEditedItem() {
+            if (currentEditItemId !== null) {
+                const item = products.find(p => p.id === currentEditItemId);
+                if (item) {
+                    let newCategory = document.getElementById('editItemCategory').value.trim();
+                    let newName = document.getElementById('editItemName').value.trim();
+                    let newPrice = document.getElementById('editItemPrice').value.trim();
                     
-                    item.customPrice = newPrice;
-                    
+                    const savedCategories = JSON.parse(localStorage.getItem('aqua_custom_categories') || '{}');
+                    const savedNames = JSON.parse(localStorage.getItem('aqua_custom_names') || '{}');
                     const savedPrices = JSON.parse(localStorage.getItem('aqua_custom_prices') || '{}');
-                    savedPrices[item.id] = newPrice;
+
+                    // Save Category
+                    if (newCategory && newCategory !== item.category) {
+                        item.customCategory = newCategory;
+                        savedCategories[item.id] = newCategory;
+                    } else {
+                        delete item.customCategory;
+                        delete savedCategories[item.id];
+                    }
+
+                    // Save Name
+                    if (newName && newName !== item.name) {
+                        item.customName = newName;
+                        savedNames[item.id] = newName;
+                    } else {
+                        delete item.customName;
+                        delete savedNames[item.id];
+                    }
+
+                    // Save Price
+                    if (newPrice && newPrice !== item.price) {
+                        if (!newPrice.startsWith('$')) newPrice = '$' + newPrice;
+                        item.customPrice = newPrice;
+                        savedPrices[item.id] = newPrice;
+                    } else {
+                        delete item.customPrice;
+                        delete savedPrices[item.id];
+                    }
+                    
+                    localStorage.setItem('aqua_custom_categories', JSON.stringify(savedCategories));
+                    localStorage.setItem('aqua_custom_names', JSON.stringify(savedNames));
                     localStorage.setItem('aqua_custom_prices', JSON.stringify(savedPrices));
                     
+                    updateCategoryDropdowns();
                     filterData();
                 }
             }
-            closeEditPriceModal();
+            closeEditItemModal();
         }
 
-        function resetPrice() {
-            if (currentEditPriceId !== null) {
-                const item = products.find(p => p.id === currentEditPriceId);
+        function resetItem() {
+            if (currentEditItemId !== null) {
+                const item = products.find(p => p.id === currentEditItemId);
                 if (item) {
                     delete item.customPrice; 
+                    delete item.customName;
+                    delete item.customCategory;
                     
                     const savedPrices = JSON.parse(localStorage.getItem('aqua_custom_prices') || '{}');
-                    delete savedPrices[item.id]; 
-                    localStorage.setItem('aqua_custom_prices', JSON.stringify(savedPrices));
+                    const savedNames = JSON.parse(localStorage.getItem('aqua_custom_names') || '{}');
+                    const savedCategories = JSON.parse(localStorage.getItem('aqua_custom_categories') || '{}');
                     
+                    delete savedPrices[item.id]; 
+                    delete savedNames[item.id];
+                    delete savedCategories[item.id];
+                    
+                    localStorage.setItem('aqua_custom_prices', JSON.stringify(savedPrices));
+                    localStorage.setItem('aqua_custom_names', JSON.stringify(savedNames));
+                    localStorage.setItem('aqua_custom_categories', JSON.stringify(savedCategories));
+                    
+                    updateCategoryDropdowns();
                     filterData();
                 }
             }
-            closeEditPriceModal();
+            closeEditItemModal();
         }
 
         // --- BARCODE VIEW MODAL FUNCTIONS ---
@@ -1116,11 +1205,13 @@
             if(!item || !item.barcode) return;
             
             currentViewBarcodeId = id;
-            document.getElementById('modalItemName').textContent = item.name;
+            document.getElementById('modalItemName').textContent = item.customName || item.name;
             
             let finalPriceStr = item.customPrice || item.price;
             const latDiscount = parseInt(document.getElementById('latitudeFilter').value) || 0;
-            const isDiscountable = ['Free At Sea Packages', 'Photo Packages'].includes(item.category) || item.name === "Single Print & Digital";
+            const displayCategory = item.customCategory || item.category;
+            const displayName = item.customName || item.name;
+            const isDiscountable = ['Free At Sea Packages', 'Photo Packages'].includes(displayCategory) || displayName === "Single Print & Digital";
             
             if (latDiscount > 0 && isDiscountable) {
                 const numericPrice = parseFloat(finalPriceStr.replace(/[\$,]/g, ''));
@@ -1210,7 +1301,7 @@
             const item = products.find(p => p.id === currentViewBarcodeId);
             if (!item) return;
 
-            document.getElementById('largeDetailsItemName').textContent = item.name;
+            document.getElementById('largeDetailsItemName').textContent = item.customName || item.name;
             document.getElementById('largeItemDetails').value = item.customDetails || item.details || "";
             
             // Set Image Preview
@@ -1366,12 +1457,14 @@
             printArea.className = 'print-only';
             document.body.appendChild(printArea);
 
+            const displayName = item.customName || item.name;
+
             // Generate Avery 5160 grid (3 columns x 10 rows)
             let html = '<div class="label-sheet">';
             for(let i=0; i<30; i++) {
                 html += `
                     <div class="label">
-                        <div class="label-title">${item.name}</div>
+                        <div class="label-title">${displayName}</div>
                         <div class="label-price">${item.customPrice || item.price}</div>
                         <svg id="print-barcode-${i}"></svg>
                     </div>
@@ -1403,7 +1496,7 @@
             if(!item) return;
 
             currentAssignId = id;
-            document.getElementById('assignItemName').textContent = item.name;
+            document.getElementById('assignItemName').textContent = item.customName || item.name;
             document.getElementById('assignInput').value = '';
             
             assignModal.classList.remove('opacity-0', 'pointer-events-none');
