@@ -70,27 +70,44 @@
             
             <div class="flex flex-col sm:flex-row gap-3">
                 <!-- Search Input with Camera button -->
-                <div class="relative flex gap-2">
+                <div class="relative flex gap-2 w-full sm:w-auto">
                     <div class="relative flex-grow">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fa-solid fa-search text-slate-400"></i>
                         </div>
                         <input type="text" id="searchInput" class="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Search for item or barcode...">
                     </div>
-                    <!-- NEW DISCOUNTS BUTTON -->
-                    <button onclick="openDiscountModal()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center" title="Latitude Discounts">
-                        <i class="fa-solid fa-tags sm:mr-2"></i>
-                        <span class="text-sm font-semibold hidden sm:inline">Discounts</span>
+                    
+                    <!-- Discounts Button (Purple) -->
+                    <button onclick="openDiscountModal()" class="bg-indigo-600 text-white px-3 sm:px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center whitespace-nowrap" title="Latitude Discounts">
+                        <i class="fa-solid fa-tags mr-1.5"></i>
+                        <span class="text-sm font-semibold">Discounts</span>
                     </button>
-                    <button onclick="openScanner('search')" class="bg-blue-600 text-white px-3 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center justify-center" title="Scan Barcode">
-                        <i class="fa-solid fa-camera sm:mr-2"></i>
-                        <span class="text-sm font-semibold hidden sm:inline">Scan</span>
-                    </button>
+
+                    <!-- Scan Button (Blue) -->
+                <button onclick="openScanner('search')" class="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center justify-center whitespace-nowrap" title="Scan Barcode">
+                    <i class="fa-solid fa-camera mr-1.5"></i>
+                    <span class="text-sm font-semibold">Scan</span>
+                </button>
+            </div>
+
+            <div class="flex gap-2 w-full sm:w-auto">
+                <!-- Latitude Tier Dropdown -->
+                <div class="relative min-w-[130px]">
+                    <select id="latitudeFilter" class="pl-3 pr-8 py-2 w-full border border-indigo-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-50 text-indigo-800 appearance-none cursor-pointer text-sm font-bold transition-colors">
+                        <option value="0">No Tier</option>
+                        <option value="20">Silver 20%</option>
+                        <option value="25">Gold 25%</option>
+                        <option value="30">Plat+ 30%</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                        <i class="fa-solid fa-chevron-down text-indigo-400 text-xs"></i>
+                    </div>
                 </div>
 
                 <!-- Category Dropdown -->
-                <div class="relative">
-                    <select id="categoryFilter" class="pl-3 pr-8 py-2 w-full sm:w-48 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none cursor-pointer text-sm">
+                <div class="relative min-w-[160px] flex-grow sm:flex-grow-0">
+                    <select id="categoryFilter" class="pl-3 pr-8 py-2 w-full border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none cursor-pointer text-sm">
                         <option value="All">All Categories</option>
                         <!-- Options populated by JS -->
                     </select>
@@ -106,14 +123,14 @@
             <span id="resultCount">Showing all items</span>
             
             <div class="flex items-center gap-2">
-                <span class="text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg font-semibold mr-2">
-                    <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Auto-Saved
+                <span class="text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg font-semibold mr-2 flex items-center">
+                    <i class="fa-solid fa-cloud-arrow-down mr-1.5"></i> Auto-Saved
                 </span>
-                <button onclick="exportData()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-semibold transition-colors" title="Download Backup">
-                    <i class="fa-solid fa-download mr-1"></i> Backup
+                <button onclick="exportData()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-semibold transition-colors flex items-center" title="Download Backup">
+                    <i class="fa-solid fa-download mr-1.5"></i> Backup
                 </button>
-                <label class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-semibold transition-colors cursor-pointer" title="Restore Backup">
-                    <i class="fa-solid fa-upload mr-1"></i> Restore
+                <label class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-semibold transition-colors cursor-pointer flex items-center" title="Restore Backup">
+                    <i class="fa-solid fa-upload mr-1.5"></i> Restore
                     <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
                 </label>
             </div>
@@ -124,11 +141,11 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-slate-100 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
-                            <th class="p-4 font-semibold w-1/4">Category</th>
-                            <th class="p-4 font-semibold w-2/4">Item Name</th>
-                            <th class="p-4 font-semibold w-1/6 text-right">Price</th>
-                            <th class="p-4 font-semibold w-1/6 text-center">Barcode</th>
+                        <tr class="bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                            <th class="p-4 w-1/4">Category</th>
+                            <th class="p-4 w-2/4">Item Name</th>
+                            <th class="p-4 w-1/6 text-right">Price</th>
+                            <th class="p-4 w-1/6 text-center">Barcode</th>
                         </tr>
                     </thead>
                     <tbody id="tableBodyDesktop" class="divide-y divide-slate-100">
@@ -183,7 +200,7 @@
         </div>
     </div>
 
-    <!-- Item Details Expanded Modal (UI UPDATED TO MATCH SCREENSHOT) -->
+    <!-- Item Details Expanded Modal (UI MATCHING SCREENSHOT) -->
     <div id="detailsModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[70]">
         <div class="absolute w-full h-full bg-slate-900 opacity-70 modal-overlay cursor-pointer" onclick="closeDetailsModal()"></div>
         
@@ -202,22 +219,23 @@
             
             <div class="p-5 flex-grow flex flex-col overflow-y-auto gap-4">
                 
-                <!-- Match Screenshot Image Upload Section -->
+                <!-- Match Screenshot Image Upload Section (NO CAPTURE ATTR) -->
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                    <div class="p-3 bg-white border-b border-slate-100 flex items-center">
+                    <div class="p-3 bg-white flex items-center">
                         <label class="block text-sm font-bold text-slate-700 flex items-center">
                             <i class="fa-solid fa-camera text-slate-500 mr-2"></i> Product Image
                         </label>
                     </div>
                     
-                    <div class="p-4 flex flex-col items-center">
-                        <div id="productImagePreview" class="w-full h-48 sm:h-64 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-100 transition-colors relative group" onclick="document.getElementById('imageUploader').click()">
-                            <!-- Default UI matching screenshot -->
+                    <div class="px-4 pb-4 flex flex-col items-center">
+                        <div id="productImagePreview" class="w-full h-48 sm:h-64 bg-white rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-50 transition-colors relative group" onclick="document.getElementById('imageUploader').click()">
+                            <!-- Default UI exactly matching screenshot -->
                             <i class="fa-solid fa-camera text-slate-400 text-3xl mb-2"></i>
-                            <span class="text-sm text-blue-500 hover:text-blue-600 font-medium cursor-pointer">Click to Take Photo or Upload</span>
+                            <span class="text-sm text-blue-500 hover:text-blue-600 font-medium">Click to Take Photo or Upload</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-3 text-center w-full">Images are automatically resized to save space.</p>
-                        <!-- Notice: capture="environment" is REMOVED to allow gallery choice -->
+                        <p class="text-[11px] text-slate-400 mt-2 text-center w-full">Images are automatically resized to save space.</p>
+                        
+                        <!-- REMOVED capture="environment" SO PHONE PROMPTS GALLERY OR CAMERA -->
                         <input type="file" id="imageUploader" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
                     </div>
                 </div>
@@ -235,7 +253,7 @@
         </div>
     </div>
 
-    <!-- Barcode View Modal (Updated Badge and Removed Tips) -->
+    <!-- Barcode View Modal -->
     <div id="barcodeModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
         <div class="absolute w-full h-full bg-slate-900 opacity-50 modal-overlay cursor-pointer" onclick="closeBarcodeModal()"></div>
         
@@ -266,8 +284,6 @@
                     <img id="modalImagePreview" class="w-full h-32 object-contain bg-slate-50 rounded-lg border border-slate-200">
                 </div>
                 
-                <!-- Removed Scanning Tips Section per request -->
-
                 <!-- Product Specs & Pitch Area (Clickable Preview) -->
                 <div class="mt-5 w-full text-left">
                     <div onclick="openDetailsModal()" class="w-full text-xs p-3.5 border border-slate-300 rounded-xl bg-white hover:bg-blue-50 hover:border-blue-400 hover:shadow-md cursor-pointer transition-all relative group min-h-[90px]">
@@ -346,7 +362,7 @@
         </div>
     </div>
 
-    <!-- NEW: Latitude Discount Modal -->
+    <!-- NEW: Latitude Discount Modal (From Word Document) -->
     <div id="discountModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[90]">
         <div class="absolute w-full h-full bg-slate-900 opacity-70 modal-overlay cursor-pointer" onclick="closeDiscountModal()"></div>
         
@@ -478,9 +494,8 @@
                 <!-- Savings Logic Pitch -->
                 <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
                     <p class="font-bold text-emerald-800 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-lightbulb text-emerald-500 text-lg"></i> SAVINGS PITCH
+                        <i class="fa-solid fa-lightbulb text-emerald-500 text-lg"></i> SAVINGS
                     </p>
-                    <p class="text-xs text-emerald-700 mb-3">It’s important to remember the savings the guest receives per package. They save on the number of images per package when calculated at <strong>$50 per print & digital</strong>.</p>
                     
                     <ul class="space-y-2 text-sm font-medium text-emerald-900">
                         <li class="flex items-start"><i class="fa-solid fa-check text-emerald-500 mt-1 mr-2"></i> <span><strong>Basic:</strong> Save $100 (5x Prints & Digital at $50 each) – <span class="bg-emerald-200 px-1 rounded">plus 1 FREE Photo & Digital</span></span></li>
@@ -781,7 +796,7 @@
             const savedBarcodes = JSON.parse(localStorage.getItem('aqua_custom_barcodes') || '{}');
             const savedPrices = JSON.parse(localStorage.getItem('aqua_custom_prices') || '{}');
             const savedDetails = JSON.parse(localStorage.getItem('aqua_custom_details') || '{}');
-            const savedImages = JSON.parse(localStorage.getItem('aqua_custom_images') || '{}'); // NEW IMAGE LOAD
+            const savedImages = JSON.parse(localStorage.getItem('aqua_custom_images') || '{}'); 
             
             products.forEach(p => {
                 if (savedBarcodes[p.id] !== undefined) {
@@ -817,6 +832,7 @@
         const mobileCardsContainer = document.getElementById('mobileCardsContainer');
         const searchInput = document.getElementById('searchInput');
         const categoryFilter = document.getElementById('categoryFilter');
+        const latitudeFilter = document.getElementById('latitudeFilter');
         const resultCount = document.getElementById('resultCount');
         const emptyState = document.getElementById('emptyState');
         const barcodeModal = document.getElementById('barcodeModal');
@@ -842,6 +858,7 @@
         // Event Listeners
         searchInput.addEventListener('input', filterData);
         categoryFilter.addEventListener('change', filterData);
+        latitudeFilter.addEventListener('change', filterData);
 
         // --- BACKUP & RESTORE FUNCTIONS ---
         function exportData() {
@@ -900,6 +917,8 @@
             tableBodyDesktop.innerHTML = '';
             mobileCardsContainer.innerHTML = '';
             
+            const latitudeDiscount = parseInt(latitudeFilter.value) || 0;
+            
             if (data.length === 0) {
                 emptyState.classList.remove('hidden');
                 tableBodyDesktop.parentElement.parentElement.classList.add('hidden');
@@ -917,17 +936,31 @@
                 let barcodeCellDesktop = '';
                 let barcodeBtnMobile = '';
 
-                const displayPrice = item.customPrice ? item.customPrice : item.price;
-                const priceIndicator = item.customPrice ? `<i class="fa-solid fa-asterisk text-[10px] text-orange-400 absolute top-0 -right-2.5" title="Edited Price"></i>` : '';
+                let basePrice = item.customPrice ? item.customPrice : item.price;
+                let finalPriceStr = basePrice;
+                let priceIndicator = item.customPrice ? `<i class="fa-solid fa-asterisk text-[10px] text-orange-400 absolute top-0 -right-2.5" title="Edited Price"></i>` : '';
+                let textColorClass = "text-blue-600";
+
+                // Apply Latitude Discount
+                const isDiscountable = ['Free At Sea Packages', 'Photo Packages'].includes(item.category) || item.name === "Single Print & Digital";
+                if (latitudeDiscount > 0 && isDiscountable) {
+                    const numericPrice = parseFloat(basePrice.replace(/[\$,]/g, ''));
+                    if (!isNaN(numericPrice)) {
+                        const discounted = numericPrice * (1 - (latitudeDiscount / 100));
+                        finalPriceStr = '$' + discounted.toFixed(2);
+                        priceIndicator = `<span class="absolute -top-2 -right-6 bg-indigo-100 text-indigo-700 text-[9px] px-1 rounded font-bold shadow-sm">-${latitudeDiscount}%</span>`;
+                        textColorClass = "text-indigo-600";
+                    }
+                }
 
                 if (item.barcode) {
                     const badgeIcon = item.isCustom ? 'fa-user-check text-emerald-500' : 'fa-barcode text-blue-500';
                     const buttonLabel = `<i class="fa-solid ${badgeIcon} mr-2"></i> ${item.barcode}`;
-                    const btnClass = item.isCustom ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-blue-200 text-slate-800';
+                    const btnClass = item.isCustom ? 'bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm';
                     
                     barcodeCellDesktop = `
                         <button onclick="openBarcodeModal(${item.id})" 
-                            class="inline-flex items-center justify-center border hover:shadow-sm px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${btnClass}">
+                            class="inline-flex items-center justify-center px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${btnClass}">
                             ${buttonLabel}
                         </button>
                     `;
@@ -960,11 +993,11 @@
                         </span>
                     </td>
                     <td class="p-4 align-middle font-semibold text-slate-800">${item.name}</td>
-                    <td class="p-4 align-middle text-right font-extrabold text-blue-600 text-base">
-                        <div class="inline-flex relative items-center justify-end cursor-pointer group hover:bg-blue-50 px-2 py-1 -mr-2 rounded transition-colors" onclick="openEditPriceModal(${item.id})" title="Edit Price">
-                            ${displayPrice}
+                    <td class="p-4 align-middle text-right font-extrabold ${textColorClass} text-base">
+                        <div class="inline-flex relative items-center justify-end cursor-pointer group hover:bg-slate-100 px-2 py-1 -mr-2 rounded transition-colors" onclick="openEditPriceModal(${item.id})" title="Edit Price">
+                            ${finalPriceStr}
                             ${priceIndicator}
-                            <i class="fa-solid fa-pencil-alt text-[10px] text-blue-300 opacity-0 group-hover:opacity-100 ml-2 transition-opacity"></i>
+                            <i class="fa-solid fa-pencil-alt text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 ml-2 transition-opacity"></i>
                         </div>
                     </td>
                     <td class="p-4 align-middle text-center">${barcodeCellDesktop}</td>
@@ -992,9 +1025,9 @@
                     </div>
                     <div class="flex justify-between items-center mt-1 pt-2 border-t border-slate-100">
                         <div class="relative cursor-pointer hover:bg-slate-50 px-2 py-1 rounded -ml-2 transition-colors inline-flex items-center group" onclick="openEditPriceModal(${item.id})">
-                            <span class="text-lg font-black text-blue-600">${displayPrice}</span>
+                            <span class="text-lg font-black ${textColorClass}">${finalPriceStr}</span>
                             ${priceIndicator}
-                            <i class="fa-solid fa-pencil-alt text-xs text-slate-300 ml-2"></i>
+                            <i class="fa-solid fa-pencil-alt text-xs text-slate-300 ml-3"></i>
                         </div>
                         ${barcodeBtnMobile}
                     </div>
@@ -1084,7 +1117,18 @@
             
             currentViewBarcodeId = id;
             document.getElementById('modalItemName').textContent = item.name;
-            document.getElementById('modalPrice').textContent = item.customPrice || item.price;
+            
+            let finalPriceStr = item.customPrice || item.price;
+            const latDiscount = parseInt(document.getElementById('latitudeFilter').value) || 0;
+            const isDiscountable = ['Free At Sea Packages', 'Photo Packages'].includes(item.category) || item.name === "Single Print & Digital";
+            
+            if (latDiscount > 0 && isDiscountable) {
+                const numericPrice = parseFloat(finalPriceStr.replace(/[\$,]/g, ''));
+                if (!isNaN(numericPrice)) {
+                    finalPriceStr = '$' + (numericPrice * (1 - (latDiscount / 100))).toFixed(2) + ` <span class="text-sm text-indigo-600 font-bold ml-1 px-2 py-0.5 bg-indigo-100 rounded-lg shadow-sm">-${latDiscount}%</span>`;
+                }
+            }
+            document.getElementById('modalPrice').innerHTML = finalPriceStr;
             
             // Populate Image Preview
             const imgContainer = document.getElementById('modalImagePreviewContainer');
@@ -1116,13 +1160,14 @@
             
             if(item.isCustom) {
                 badge.innerHTML = `
-                    <div class="inline-flex items-center justify-center px-4 py-1.5 bg-emerald-50 border border-emerald-100 rounded-full text-emerald-700 text-sm font-bold shadow-sm">
+                    <div class="inline-flex items-center justify-center px-4 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-800 text-sm font-bold shadow-sm">
                         <i class="fa-solid fa-user-check mr-2"></i> Saved by You
                     </div>`;
                 resetBtn.classList.remove('hidden'); 
             } else {
+                // Exact Match for "Official Code" screenshot requested
                 badge.innerHTML = `
-                    <div class="inline-flex items-center justify-center px-4 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-blue-700 text-sm font-bold shadow-sm">
+                    <div class="inline-flex items-center justify-center px-4 py-1.5 bg-[#eff6ff] border border-[#dbeafe] rounded-full text-[#1e40af] text-sm font-bold shadow-sm">
                         <i class="fa-solid fa-file-contract mr-2"></i> Official Code
                     </div>`;
                 resetBtn.classList.add('hidden'); 
@@ -1132,15 +1177,15 @@
                 if (typeof JsBarcode === 'undefined') throw new Error("JsBarcode missing");
                 JsBarcode("#barcodeCanvas", item.barcode, {
                     format: "CODE128", 
-                    lineColor: "#000000", // Pure black for max contrast
-                    background: "#ffffff", // Pure white for max contrast
-                    width: 3, // Thicker bars to help laser scanners on screens
+                    lineColor: "#000000",
+                    background: "#ffffff",
+                    width: 3, 
                     height: 90,
                     displayValue: true, 
                     fontSize: 16, 
                     fontOptions: "bold", 
                     textMargin: 6,
-                    margin: 15 // Important: Wider quiet zones for infrared lasers
+                    margin: 15 
                 });
             } catch (error) {
                 console.error(error);
@@ -1168,7 +1213,7 @@
             document.getElementById('largeDetailsItemName').textContent = item.name;
             document.getElementById('largeItemDetails').value = item.customDetails || item.details || "";
             
-            // Set Image Preview Matching Screenshot
+            // Set Image Preview
             const previewBox = document.getElementById('productImagePreview');
             if (item.customImage) {
                 previewBox.innerHTML = `
@@ -1179,8 +1224,8 @@
                 `;
             } else {
                 previewBox.innerHTML = `
-                    <i class="fa-solid fa-camera text-slate-400 text-3xl mb-2"></i>
-                    <span class="text-sm text-blue-500 hover:text-blue-600 font-medium cursor-pointer">Click to Take Photo or Upload</span>
+                    <i class="fa-solid fa-camera text-slate-400 text-4xl mb-2"></i>
+                    <span class="text-sm text-blue-500 hover:text-blue-600 font-medium">Click to Take Photo or Upload</span>
                 `;
             }
 
